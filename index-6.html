@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<title>BREW — コーヒー抽出ナビ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800;900&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root{
+  --red:#e2342b;
+  --blue:#1f50a0;
+  --yellow:#f4c20d;
+  --ink:#16140f;
+  --paper:#f3efe4;
+  --line:3px solid var(--ink);
+  --disp:'Archivo','Arial Narrow',system-ui,sans-serif;
+  --body:'Space Grotesk','Helvetica Neue',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--paper);color:var(--ink);font-family:var(--body)}
+body{max-width:560px;margin:0 auto;min-height:100vh;padding-bottom:84px;-webkit-tap-highlight-color:transparent}
+button{font-family:var(--body);cursor:pointer;border-radius:0}
+input,select,textarea{font-family:var(--body);border-radius:0}
+h1,h2,h3{font-family:var(--disp);text-transform:uppercase;letter-spacing:.04em;line-height:.98}
+
+/* ---- header ---- */
+.top{display:flex;align-items:center;gap:10px;padding:16px 18px 14px;border-bottom:var(--line);background:var(--paper);position:sticky;top:0;z-index:20}
+.logo{font-family:var(--disp);font-weight:900;font-size:30px;letter-spacing:-.01em}
+.logo b{color:var(--red)}
+.mark{width:22px;height:22px;background:var(--blue);border:var(--line);border-radius:50%}
+.mark.t{background:var(--yellow);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.top .sp{flex:1}
+
+/* ---- screens ---- */
+.screen{display:none;padding:18px}
+.screen.on{display:block;animation:in .18s ease}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.eyebrow{font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+.h-title{font-size:34px;font-weight:900;margin-bottom:16px}
+
+/* ---- recipe cards ---- */
+.group-lbl{font-family:var(--disp);font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin:18px 0 8px;padding-left:2px;border-left:8px solid var(--yellow);padding:2px 0 2px 10px}
+.card{border:var(--line);background:#fff;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;position:relative}
+.card:active{transform:translate(2px,2px)}
+.card .dot{width:34px;height:34px;flex:none;border:var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:13px}
+.card.hot .dot{background:var(--red);color:#fff}
+.card.ice .dot{background:var(--blue);color:#fff}
+.card .nm{font-family:var(--disp);font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.02em}
+.card .meta{font-size:12px;opacity:.7;margin-top:2px}
+.card .go{margin-left:auto;font-family:var(--disp);font-weight:900;font-size:20px}
+
+/* ---- buttons ---- */
+.btn{display:block;width:100%;border:var(--line);background:var(--ink);color:var(--paper);font-family:var(--disp);font-weight:900;text-transform:uppercase;letter-spacing:.08em;font-size:17px;padding:16px;text-align:center}
+.btn:active{transform:translate(2px,2px)}
+.btn.red{background:var(--red);color:#fff}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.yellow{background:var(--yellow);color:var(--ink)}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.sm{font-size:13px;padding:11px;width:auto;display:inline-block}
+.btn[disabled]{opacity:.4}
+
+/* ---- setup / beans ---- */
+.box{border:var(--line);background:#fff;padding:14px;margin-bottom:14px}
+.box h3{font-size:15px;margin-bottom:10px;letter-spacing:.06em}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+label.fld{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;opacity:.65;margin:8px 0 3px}
+input.in,select.in,textarea.in{width:100%;border:var(--line);background:var(--paper);padding:11px;font-size:15px;font-weight:500}
+textarea.in{resize:vertical;min-height:54px}
+.dose{display:flex;align-items:stretch;border:var(--line);background:#fff}
+.dose button{width:54px;border:none;background:var(--yellow);font-family:var(--disp);font-weight:900;font-size:26px;border-left:var(--line);border-right:var(--line)}
+.dose button:first-child{border-left:none;border-right:var(--line)}
+.dose button:last-child{border-right:none;border-left:var(--line)}
+.dose .val{flex:1;text-align:center;font-family:var(--disp);font-weight:900;font-size:30px;display:flex;align-items:center;justify-content:center;gap:4px}
+.dose .val span{font-size:14px;opacity:.6}
+
+/* bean chips */
+.chip{display:inline-flex;align-items:center;gap:7px;border:var(--line);background:#fff;padding:8px 10px;margin:0 6px 6px 0;font-size:13px;font-weight:700}
+.chip.sel{background:var(--ink);color:var(--paper)}
+.chip .g{width:54px;border:2px solid currentColor;background:transparent;color:inherit;padding:3px 5px;font-size:13px;font-weight:700;text-align:right}
+.chip.sel .g{color:#fff}
+.muted{font-size:12px;opacity:.6;margin:6px 0}
+
+/* recipe table */
+.rtable{width:100%;border-collapse:collapse;border:var(--line);background:#fff;margin-top:6px;font-size:14px}
+.rtable th{background:var(--ink);color:var(--paper);font-family:var(--disp);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 6px}
+.rtable td{border-top:2px solid var(--ink);padding:9px 6px;text-align:center;font-weight:600}
+.rtable td.tip{text-align:left;font-size:11px;font-weight:500;opacity:.8}
+.rtable .num{font-family:var(--disp);font-weight:900;color:var(--red)}
+.rtable tr.blm td{background:#faf3d8}
+
+/* ---- timer ---- */
+.tmwrap{text-align:center;padding:6px 0}
+.dial{position:relative;width:230px;height:230px;margin:8px auto 4px}
+.dial svg{transform:rotate(-90deg)}
+.dial .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dial .cum{font-family:var(--disp);font-weight:900;font-size:54px;line-height:.9}
+.dial .cum span{font-size:18px;opacity:.55}
+.dial .clk{font-family:var(--disp);font-weight:800;font-size:20px;letter-spacing:.04em;margin-top:4px}
+.now{border:var(--line);background:var(--yellow);padding:12px;margin:8px 0;font-family:var(--disp);font-weight:900;font-size:21px;text-transform:uppercase}
+.now small{display:block;font-family:var(--body);font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;margin-top:4px;opacity:.85}
+.next{font-size:13px;font-weight:700;opacity:.7;margin-bottom:10px}
+.pour-list{border:var(--line);background:#fff;margin-top:10px}
+.pour-list .pr{display:flex;justify-content:space-between;padding:9px 12px;border-top:2px solid var(--ink);font-weight:600;font-size:14px}
+.pour-list .pr:first-child{border-top:none}
+.pour-list .pr.done{opacity:.4}
+.pour-list .pr.cur{background:var(--yellow)}
+.pour-list .pr .n{font-family:var(--disp);font-weight:900;color:var(--red);margin-right:8px}
+
+/* ---- rating ---- */
+.rate{display:flex;align-items:center;gap:8px;margin:10px 0}
+.rate .lb{width:60px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.rate .pips{display:flex;gap:5px;flex:1}
+.pip{flex:1;height:26px;border:var(--line);background:#fff}
+.pip.on{background:var(--blue)}
+.stars{display:flex;gap:6px}
+.star{font-size:30px;line-height:1;color:#ccc;font-family:var(--disp)}
+.star.on{color:var(--yellow);text-shadow:1.5px 1.5px 0 var(--ink)}
+.toggle{display:flex;align-items:center;gap:10px;border:var(--line);background:#fff;padding:12px;margin:10px 0}
+.toggle .sw{width:52px;height:30px;border:var(--line);background:#fff;position:relative;flex:none}
+.toggle .sw b{position:absolute;top:2px;left:2px;width:22px;height:22px;background:var(--ink);transition:.15s}
+.toggle.on .sw{background:var(--red)}
+.toggle.on .sw b{left:24px;background:#fff}
+.toggle .tx{font-family:var(--disp);font-weight:800;text-transform:uppercase;font-size:14px}
+
+/* history / bean list */
+.item{border:var(--line);background:#fff;padding:12px;margin-bottom:9px}
+.item .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.item .hd .t{font-family:var(--disp);font-weight:800;font-size:16px;text-transform:uppercase}
+.item .hd .d{font-size:11px;opacity:.6;font-weight:700}
+.item .sub{font-size:12px;opacity:.75;margin-top:3px}
+.item .tags{margin-top:7px;font-size:12px}
+.tag{display:inline-block;border:2px solid var(--ink);padding:2px 6px;margin:0 5px 5px 0;font-weight:700;font-size:11px}
+.tag.y{background:var(--yellow)}
+.flag{display:inline-block;background:var(--red);color:#fff;font-family:var(--disp);font-weight:800;font-size:10px;padding:2px 6px;letter-spacing:.06em}
+.bean-st{font-family:var(--disp);font-weight:800;font-size:10px;padding:2px 6px;border:2px solid var(--ink)}
+.bean-st.fin{background:var(--ink);color:var(--paper)}
+.bean-st.act{background:var(--yellow)}
+.seg{display:flex;border:var(--line);margin-bottom:14px}
+.seg button{flex:1;background:#fff;border:none;padding:11px;font-family:var(--disp);font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:.06em;border-right:var(--line)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--ink);color:var(--paper)}
+.empty{text-align:center;padding:36px 14px;opacity:.55;font-weight:600}
+.empty .big{font-family:var(--disp);font-weight:900;font-size:46px;color:var(--ink);opacity:.25;margin-bottom:6px}
+
+/* ---- nav ---- */
+.nav{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;display:flex;background:var(--ink);border-top:var(--line)}
+.nav button{flex:1;background:none;border:none;color:var(--paper);padding:13px 4px 16px;font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.5;border-right:1px solid #3a362c}
+.nav button:last-child{border-right:none}
+.nav button.on{opacity:1}
+.nav button.on .ic{background:var(--yellow)}
+.nav .ic{display:block;width:16px;height:16px;background:var(--paper);margin:0 auto 5px}
+.nav .ic.c{border-radius:50%}
+.nav .ic.t{clip-path:polygon(50% 0,100% 100%,0 100%)}
+
+.back{background:none;border:none;font-family:var(--disp);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:inline-flex;align-items:center;gap:6px}
+.back::before{content:"";width:14px;height:14px;background:var(--red);clip-path:polygon(100% 0,100% 100%,0 50%)}
+.note{font-size:12px;border-left:6px solid var(--blue);padding:6px 0 6px 10px;margin:10px 0;opacity:.85}
+.spacer{height:6px}
+.del{background:none;border:none;color:var(--red);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="mark"></div><div class="mark t"></div>
+  <div class="logo">BR<b>E</b>W</div>
+  <div class="sp"></div>
+</div>
+
+<!-- ============ HOME ============ -->
+<section id="home" class="screen on">
+  <div class="eyebrow">SELECT RECIPE</div>
+  <h1 class="h-title">淹れる</h1>
+  <div id="recipeList"></div>
+</section>
+
+<!-- ============ SETUP ============ -->
+<section id="setup" class="screen">
+  <button class="back" onclick="go('home')">レシピ</button>
+  <div class="eyebrow" id="setupGroup"></div>
+  <h2 class="h-title" id="setupName" style="font-size:28px"></h2>
+  <div class="muted" id="setupBase"></div>
+
+  <div class="box">
+    <h3>豆量</h3>
+    <div class="dose">
+      <button onclick="bump(-1)">–</button>
+      <div class="val"><span id="doseSrc"></span><b id="doseVal">20</b><span>g</span></div>
+      <button onclick="bump(1)">+</button>
+    </div>
+    <div class="muted">豆を選ぶと合計量が自動で入ります。ブレンドは複数選択できます。</div>
+  </div>
+
+  <div class="box">
+    <h3>使う豆<span style="font-weight:500;font-size:11px;opacity:.6"> ／ 任意・複数可</span></h3>
+    <div id="beanPick"></div>
+    <button class="btn ghost sm" onclick="go('beanEdit');beanForm()">＋ 豆を登録</button>
+  </div>
+
+  <div id="scaledTable"></div>
+  <div class="spacer"></div>
+  <button class="btn red" onclick="startBrew()">タイマー開始</button>
+</section>
+
+<!-- ============ TIMER ============ -->
+<section id="timer" class="screen">
+  <button class="back" onclick="stopTimer();go('setup')">設定にもどる</button>
+  <div class="tmwrap">
+    <div class="dial">
+      <svg width="230" height="230" viewBox="0 0 230 230">
+        <circle cx="115" cy="115" r="100" fill="none" stroke="#dcd6c6" stroke-width="14"/>
+        <circle id="ring" cx="115" cy="115" r="100" fill="none" stroke="#e2342b" stroke-width="14" stroke-dasharray="628" stroke-dashoffset="628"/>
+      </svg>
+      <div class="ctr">
+        <div class="cum"><b id="tCum">0</b><span>g</span></div>
+        <div class="clk" id="tClock">0:00</div>
+      </div>
+    </div>
+  </div>
+  <div class="now" id="tNow">スタート<small>下のボタンで計測開始</small></div>
+  <div class="next" id="tNext"></div>
+  <div class="row">
+    <button class="btn yellow" id="tPlay" onclick="toggleTimer()">スタート</button>
+    <button class="btn ghost sm" style="flex:none;width:auto;padding:16px 18px" onclick="resetTimer()">⟲</button>
+  </div>
+  <div class="pour-list" id="pourList"></div>
+  <div class="spacer"></div>
+  <button class="btn blue" onclick="toRecord()">淹れ終わり → 記録</button>
+</section>
+
+<!-- ============ RECORD ============ -->
+<section id="record" class="screen">
+  <div class="eyebrow">LOG THIS CUP</div>
+  <h2 class="h-title" style="font-size:28px">記録する</h2>
+  <div class="muted" id="recHead"></div>
+
+  <div class="box">
+    <h3>味</h3>
+    <div class="rate" data-k="acidity"><div class="lb">酸味</div><div class="pips"></div></div>
+    <div class="rate" data-k="sweet"><div class="lb">甘み</div><div class="pips"></div></div>
+    <div class="rate" data-k="body"><div class="lb">ボディ</div><div class="pips"></div></div>
+    <div class="rate" data-k="after"><div class="lb">余韻</div><div class="pips"></div></div>
+    <label class="fld">総合</label>
+    <div class="stars" id="recStars"></div>
+    <label class="fld">フレーバー・ひとこと</label>
+    <textarea class="in" id="recNote" placeholder="例：ベリー系の酸、後味に黒糖。次は少し細かく"></textarea>
+  </div>
+
+  <div class="toggle" id="recAgain" onclick="this.classList.toggle('on')">
+    <div class="sw"><b></b></div><div class="tx">また淹れたい</div>
+  </div>
+
+  <button class="btn red" onclick="saveBrew()">保存する</button>
+  <div class="spacer"></div>
+  <button class="btn ghost sm" onclick="go('home')">記録せず終了</button>
+</section>
+
+<!-- ============ BEANS ============ -->
+<section id="beans" class="screen">
+  <div class="eyebrow">INVENTORY</div>
+  <h2 class="h-title">豆</h2>
+  <div class="seg">
+    <button id="segAct" class="on" onclick="beanTab('act')">使用中</button>
+    <button id="segFin" onclick="beanTab('fin')">使い切り</button>
+  </div>
+  <button class="btn sm" onclick="go('beanEdit');beanForm()">＋ 豆を登録</button>
+  <div class="spacer"></div>
+  <div id="beanList"></div>
+</section>
+
+<!-- ============ BEAN EDIT ============ -->
+<section id="beanEdit" class="screen">
+  <button class="back" onclick="go('beans');renderBeans()">豆一覧</button>
+  <h2 class="h-title" id="beanEditTitle" style="font-size:28px">豆を登録</h2>
+  <input type="hidden" id="bId">
+  <label class="fld">名前 ／ 必須</label>
+  <input class="in" id="bName" placeholder="例：エチオピア イルガチェフェ">
+  <label class="fld">ロースター</label>
+  <input class="in" id="bRoaster" placeholder="例：THE COFFEESHOP">
+  <label class="fld">原産国・地域</label>
+  <input class="in" id="bOrigin" placeholder="例：エチオピア／コチャレ">
+  <label class="fld">焙煎度</label>
+  <select class="in" id="bRoast"><option>浅煎り</option><option selected>中煎り</option><option>中深煎り</option><option>深煎り</option></select>
+  <label class="fld">焙煎日 ／ 焙煎後日数を自動計算</label>
+  <input class="in" id="bDate" type="date">
+  <label class="fld">精製 ／ 任意</label>
+  <input class="in" id="bProcess" placeholder="例：ウォッシュド／ナチュラル">
+  <label class="fld">フレーバーノート ／ 任意</label>
+  <input class="in" id="bNotes" placeholder="例：ベリー・紅茶・ジャスミン">
+  <div class="spacer"></div>
+  <button class="btn red" onclick="saveBean()">保存する</button>
+  <div class="spacer"></div>
+  <button class="del" id="bDelBtn" style="display:none" onclick="deleteBean()">この豆を削除</button>
+</section>
+
+<!-- ============ HISTORY ============ -->
+<section id="history" class="screen">
+  <div class="eyebrow">BREW LOG</div>
+  <h2 class="h-title">記録</h2>
+  <div id="brewList"></div>
+</section>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <button id="nav-home" class="on" onclick="go('home')"><span class="ic c"></span>淹れる</button>
+  <button id="nav-beans" onclick="go('beans');renderBeans()"><span class="ic t"></span>豆</button>
+  <button id="nav-history" onclick="go('history');renderBrews()"><span class="ic"></span>記録</button>
+</nav>
+
+<script>
+/* ===================== DATA: 8 RECIPES ===================== */
+/* steps: atSec=注ぐ秒, pour=その投の注湯g(基準), cum=累計g(基準), tip=メモ, blm=蒸らし */
+const RECIPES=[
+ {id:'hg_v60_h',group:'萩原 ／ THE COFFEESHOP',name:'V60 ホット',type:'hot',method:'HARIO V60',
+  base:20,grind:'中挽き',temp:'92℃',water:300,ice:0,
+  steps:[
+   {atSec:0,pour:40,cum:40,blm:true,tip:'10秒以内に注ぎ終え、40秒蒸らし'},
+   {atSec:40,pour:40,cum:80},
+   {atSec:60,pour:40,cum:120},
+   {atSec:80,pour:60,cum:180},
+   {atSec:100,pour:60,cum:240},
+   {atSec:120,pour:60,cum:300}],
+  finishSec:150,finishTip:'2:30〜2:45で落ちきり。寸前にドリッパーを外す'},
+
+ {id:'hg_v60_i',group:'萩原 ／ THE COFFEESHOP',name:'V60 アイス',type:'ice',method:'HARIO V60',
+  base:27,grind:'中細〜中挽き',temp:'94℃',water:200,ice:130,
+  steps:[
+   {atSec:0,pour:40,cum:40,blm:true,tip:'サーバーに氷をセットしてから開始。45秒蒸らし'},
+   {atSec:55,pour:40,cum:80},
+   {atSec:75,pour:40,cum:120},
+   {atSec:95,pour:40,cum:160},
+   {atSec:115,pour:40,cum:200}],
+  finishSec:135,finishTip:'2:15〜2:30で落ちきり → すぐかき混ぜて急冷'},
+
+ {id:'hg_aero_h',group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス ホット',type:'hot',method:'エアロプレス（インバート）',
+  base:20,grind:'中挽き(紙)／中粗(金属)',temp:'—',water:290,ice:0,
+  steps:[
+   {atSec:0,pour:100,cum:100,blm:true,tip:'100g注ぎパドルで10回撹拌（30秒以内）'},
+   {atSec:30,pour:100,cum:200,tip:'合計200gに → フィルター蓋を装着（開始1分以内）'},
+   {atSec:60,pour:0,cum:200,tip:'逆さにしてカップへ。30秒かけて一定速度でプレス'},
+   {atSec:90,pour:90,cum:290,tip:'90g注ぎ足して濃度調整'}],
+  finishSec:90,finishTip:'最後に90g注ぎ足して好みの濃度に'},
+
+ {id:'hg_aero_i',group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス アイス',type:'ice',method:'エアロプレス（インバート）',
+  base:24,grind:'中細〜中挽き',temp:'94℃',water:190,ice:130,
+  steps:[
+   {atSec:0,pour:100,cum:100,blm:true,tip:'氷のサーバーを用意。100g注ぎパドル10回'},
+   {atSec:30,pour:90,cum:190,tip:'残り90gを追加し計190g、フィルターをセット'},
+   {atSec:60,pour:0,cum:190,tip:'逆さにして30秒かけてプレス → すぐ急冷'}],
+  finishSec:60,finishTip:'プレス後すぐに急冷'},
+
+ {id:'hg_fp_h',group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス ホット',type:'hot',method:'フレンチプレス',
+  base:18,grind:'粗挽き',temp:'—',water:300,ice:0,
+  steps:[
+   {atSec:0,pour:150,cum:150,blm:true,tip:'150gまで回し注ぎ、30秒蒸らし'},
+   {atSec:30,pour:150,cum:300,tip:'残りを足し計300g → プランジャーを上げた状態で蓋'},
+   {atSec:240,pour:0,cum:300,tip:'4分でゆっくり押し下げ → 静かに注ぐ'}],
+  finishSec:240,finishTip:'4分でプランジャーを押し下げる'},
+
+ {id:'hg_fp_i',group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス アイス',type:'ice',method:'フレンチプレス',
+  base:24,grind:'粗挽き',temp:'94℃',water:200,ice:130,
+  steps:[
+   {atSec:0,pour:100,cum:100,blm:true,tip:'100gで30秒蒸らし'},
+   {atSec:30,pour:100,cum:200,tip:'残りを注ぐ → プランジャーをセット'},
+   {atSec:240,pour:0,cum:200,tip:'4分で押し下げ → 氷のサーバーに注いで急冷'}],
+  finishSec:240,finishTip:'4分でプランジャーを押し下げる'},
+
+ {id:'ks_46',group:'粕谷 ／ 4:6メソッド',name:'4:6 ベーシック',type:'hot',method:'HARIO V60',
+  base:20,grind:'粗挽き',temp:'浅93／中88／深83℃',water:300,ice:0,
+  steps:[
+   {atSec:0,pour:60,cum:60,blm:true,tip:'蒸らし兼1投目'},
+   {atSec:45,pour:60,cum:120,tip:'前半完了＝ここで味が決まる'},
+   {atSec:90,pour:60,cum:180,tip:'後半（濃度調整）スタート'},
+   {atSec:130,pour:60,cum:240},
+   {atSec:160,pour:60,cum:300,tip:'注ぎきり'}],
+  finishSec:210,finishTip:'3:30でドリッパーを外す',
+  extra:'味＝前半120gの配分で：甘め(1投目<2投目)／明るい(1投目>2投目)。濃度＝後半の投数。'},
+
+ {id:'ks_10',group:'粕谷 ／ 10投式',name:'10投式 新レシピ',type:'hot',method:'HARIO V60 NEO',
+  base:20,grind:'極粗挽き',temp:'95〜96℃',water:300,ice:0,
+  steps:[
+   {atSec:0,pour:30,cum:30,blm:true,tip:'蒸らし'},
+   {atSec:30,pour:30,cum:60,tip:'ここから15秒間隔で30gずつ'},
+   {atSec:45,pour:30,cum:90},
+   {atSec:60,pour:30,cum:120},
+   {atSec:75,pour:30,cum:150},
+   {atSec:90,pour:30,cum:180},
+   {atSec:105,pour:30,cum:210},
+   {atSec:120,pour:30,cum:240,tip:'この辺りからお湯の抜けが遅くなる'},
+   {atSec:135,pour:30,cum:270},
+   {atSec:150,pour:30,cum:300,tip:'注ぎきり'}],
+  finishSec:210,finishTip:'約3:30で全量が落ちきったら完成'}
+];
+
+/* ===================== STORE ===================== */
+const KB='coffee_beans',KR='coffee_brews';
+const load=(k)=>{try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let beans=load(KB),brews=load(KR);
+
+/* ===================== NAV ===================== */
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));
+  const map={home:'nav-home',beans:'nav-beans',history:'nav-history'};
+  if(map[id])document.getElementById(map[id]).classList.add('on');
+  window.scrollTo(0,0);
+}
+
+/* ===================== HOME ===================== */
+function renderRecipes(){
+  const wrap=document.getElementById('recipeList');let html='',lastG='';
+  RECIPES.forEach(r=>{
+    if(r.group!==lastG){html+=`<div class="group-lbl">${r.group}</div>`;lastG=r.group;}
+    const meta=`${r.method} ・ 豆${r.base}g ・ ${r.type==='ice'?'アイス':'ホット'}`;
+    html+=`<div class="card ${r.type}" onclick="openSetup('${r.id}')">
+      <div class="dot">${r.type==='ice'?'IC':'HT'}</div>
+      <div><div class="nm">${r.name}</div><div class="meta">${meta}</div></div>
+      <div class="go">▶</div></div>`;
+  });
+  wrap.innerHTML=html;
+}
+
+/* ===================== SETUP ===================== */
+let cur=null,dose=20,pickG={}; // pickG: beanId -> grams
+function openSetup(id){
+  cur=RECIPES.find(r=>r.id===id);dose=cur.base;pickG={};
+  document.getElementById('setupGroup').textContent=cur.group;
+  document.getElementById('setupName').textContent=cur.name;
+  document.getElementById('setupBase').textContent=`基準 豆${cur.base}g／湯${cur.water}g`+(cur.ice?`／氷${cur.ice}g`:'')+`・${cur.grind}・${cur.temp}`;
+  renderBeanPick();syncDose();renderScaled();go('setup');
+}
+function bump(d){dose=Math.max(5,dose+d);document.getElementById('doseVal').textContent=dose;document.getElementById('doseSrc').textContent='';renderScaled();}
+function syncDose(){
+  const sum=Object.values(pickG).reduce((a,b)=>a+(+b||0),0);
+  if(sum>0){dose=sum;document.getElementById('doseSrc').textContent='';}
+  document.getElementById('doseVal').textContent=dose;
+  renderScaled();
+}
+function renderBeanPick(){
+  const act=beans.filter(b=>b.status!=='fin');
+  const el=document.getElementById('beanPick');
+  if(!act.length){el.innerHTML='<div class="muted">使用中の豆がありません。下から登録できます。</div>';return;}
+  el.innerHTML=act.map(b=>{
+    const sel=pickG[b.id]!==undefined;
+    const g=sel?pickG[b.id]:'';
+    return `<span class="chip ${sel?'sel':''}">
+      <span onclick="toggleBean('${b.id}')">${b.name}${ageStr(b)?` ・${ageStr(b)}`:''}</span>
+      ${sel?`<input class="g" type="number" inputmode="numeric" value="${g}" placeholder="g" onchange="setBeanG('${b.id}',this.value)">g`:''}
+    </span>`;
+  }).join('');
+}
+function toggleBean(id){
+  if(pickG[id]!==undefined){delete pickG[id];}
+  else{
+    const remain=dose-Object.values(pickG).reduce((a,b)=>a+(+b||0),0);
+    pickG[id]=Object.keys(pickG).length===0?dose:Math.max(0,remain);
+  }
+  renderBeanPick();syncDose();
+}
+function setBeanG(id,v){pickG[id]=Math.max(0,+v||0);syncDose();renderBeanPick();}
+
+function scale(){const f=dose/cur.base;return cur.steps.map(s=>({...s,pourS:Math.round(s.pour*f),cumS:Math.round(s.cum*f)}));}
+function renderScaled(){
+  const rows=scale();const f=dose/cur.base;
+  let body=rows.map((s,i)=>`<tr class="${s.blm?'blm':''}">
+    <td class="num">${i+1}</td>
+    <td>${fmt(s.atSec)}</td>
+    <td>${s.pourS?s.pourS+'g':'—'}</td>
+    <td>${s.cumS}g</td>
+    <td class="tip">${s.tip||''}</td></tr>`).join('');
+  const iceR=cur.ice?`<tr><td class="num">氷</td><td>—</td><td>${Math.round(cur.ice*f)}g</td><td>—</td><td class="tip">急冷用</td></tr>`:'';
+  let extra=cur.extra?`<div class="note">${cur.extra}</div>`:'';
+  let iceNote=cur.type==='ice'?`<div class="note">アイスは湯量・氷量も豆量に比例スケールしています。出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
+  document.getElementById('scaledTable').innerHTML=
+    `<div class="eyebrow" style="margin-top:14px">RECIPE ／ 豆${dose}g</div>
+     <table class="rtable"><thead><tr><th>#</th><th>経過</th><th>注湯</th><th>累計</th><th>ポイント</th></tr></thead>
+     <tbody>${body}${iceR}</tbody></table>${extra}${iceNote}`;
+}
+
+/* ===================== TIMER ===================== */
+let tInt=null,tSec=0,tRun=false,tStepsCache=[];
+function startBrew(){tStepsCache=scale();resetTimer();go('timer');renderPourList();}
+function resetTimer(){stopTimer();tSec=0;tRun=false;updTimer();document.getElementById('tPlay').textContent='スタート';}
+function stopTimer(){if(tInt){clearInterval(tInt);tInt=null;}tRun=false;}
+function toggleTimer(){
+  if(tRun){stopTimer();document.getElementById('tPlay').textContent='再開';}
+  else{tRun=true;document.getElementById('tPlay').textContent='一時停止';
+    tInt=setInterval(()=>{tSec++;updTimer();},1000);}
+}
+function curStepIndex(){let idx=-1;tStepsCache.forEach((s,i)=>{if(tSec>=s.atSec)idx=i;});return idx;}
+function updTimer(){
+  const steps=tStepsCache,i=curStepIndex();
+  const total=cur.finishSec||steps[steps.length-1].atSec;
+  const frac=Math.min(1,tSec/total);
+  document.getElementById('ring').style.strokeDashoffset=628*(1-frac);
+  document.getElementById('tClock').textContent=fmt(tSec);
+  const cumNow=i>=0?steps[i].cumS:0;
+  document.getElementById('tCum').textContent=cumNow;
+  const nowEl=document.getElementById('tNow'),nextEl=document.getElementById('tNext');
+  if(i<0){nowEl.innerHTML='まもなく1投目<small>0:00で蒸らしスタート</small>';}
+  else{const s=steps[i];
+    if(s.pourS>0)nowEl.innerHTML=`${i+1}投目 ${s.pourS}g 注ぐ（累計${s.cumS}g）<small>${s.tip||''}</small>`;
+    else nowEl.innerHTML=`${s.tip||'抽出中'}<small>累計${s.cumS}g</small>`;
+  }
+  const nx=steps.find(s=>s.atSec>tSec);
+  if(nx){const d=nx.atSec-tSec;nextEl.textContent=`次：${fmt(nx.atSec)}（あと${d}秒）${nx.pourS>0?` → ${nx.pourS}g`:''}`;}
+  else{nextEl.textContent=cur.finishTip?`▸ ${cur.finishTip}`:'';}
+  document.querySelectorAll('#pourList .pr').forEach((el,k)=>{
+    el.classList.toggle('done',k<i);el.classList.toggle('cur',k===i);});
+}
+function renderPourList(){
+  document.getElementById('pourList').innerHTML=tStepsCache.map((s,i)=>
+    `<div class="pr"><span><span class="n">${i+1}</span>${fmt(s.atSec)}</span>
+     <span>${s.pourS>0?s.pourS+'g':'操作'} ／ 累計 ${s.cumS}g</span></div>`).join('');
+}
+
+/* ===================== RECORD ===================== */
+let recRate={acidity:0,sweet:0,body:0,after:0},recStars=0;
+function buildPips(){
+  document.querySelectorAll('.rate').forEach(r=>{
+    const k=r.dataset.k,p=r.querySelector('.pips');p.innerHTML='';
+    for(let n=1;n<=5;n++){const d=document.createElement('div');d.className='pip';
+      d.onclick=()=>{recRate[k]=n;paintPips();};p.appendChild(d);}
+  });
+  const st=document.getElementById('recStars');st.innerHTML='';
+  for(let n=1;n<=5;n++){const s=document.createElement('span');s.className='star';s.textContent='★';
+    s.onclick=()=>{recStars=n;paintPips();};st.appendChild(s);}
+}
+function paintPips(){
+  document.querySelectorAll('.rate').forEach(r=>{const k=r.dataset.k;
+    r.querySelectorAll('.pip').forEach((p,idx)=>p.classList.toggle('on',idx<recRate[k]));});
+  document.querySelectorAll('#recStars .star').forEach((s,idx)=>s.classList.toggle('on',idx<recStars));
+}
+function toRecord(){
+  stopTimer();recRate={acidity:0,sweet:0,body:0,after:0};recStars=0;
+  document.getElementById('recNote').value='';
+  document.getElementById('recAgain').classList.remove('on');
+  buildPips();
+  const names=Object.keys(pickG).map(id=>{const b=beans.find(x=>x.id===id);return b?`${b.name}(${pickG[id]||0}g)`:'';}).filter(Boolean);
+  document.getElementById('recHead').textContent=`${cur.name}・豆${dose}g`+(names.length?` ／ ${names.join(' + ')}`:'');
+  go('record');
+}
+function saveBrew(){
+  const used=Object.keys(pickG).map(id=>{const b=beans.find(x=>x.id===id);
+    return{id,name:b?b.name:'(削除済)',g:+pickG[id]||0,age:b?ageDays(b):null};});
+  brews.unshift({
+    id:'br'+Date.now(),date:new Date().toISOString(),
+    recipe:cur.name,group:cur.group,dose,beans:used,
+    rate:{...recRate},stars:recStars,
+    again:document.getElementById('recAgain').classList.contains('on'),
+    note:document.getElementById('recNote').value.trim()
+  });
+  save(KR,brews);go('history');renderBrews();
+}
+
+/* ===================== BEANS ===================== */
+let beanTabState='act';
+function beanTab(t){beanTabState=t;
+  document.getElementById('segAct').classList.toggle('on',t==='act');
+  document.getElementById('segFin').classList.toggle('on',t==='fin');
+  renderBeans();}
+function ageDays(b){if(!b.date)return null;const d=Math.floor((Date.now()-new Date(b.date+'T00:00:00').getTime())/86400000);return d<0?null:d;}
+function ageStr(b){const a=ageDays(b);return a===null?'':`焙煎後${a}日`;}
+function renderBeans(){
+  const list=beans.filter(b=>beanTabState==='fin'?b.status==='fin':b.status!=='fin');
+  const el=document.getElementById('beanList');
+  if(!list.length){el.innerHTML=`<div class="empty"><div class="big">∅</div>${beanTabState==='fin'?'使い切った豆はまだありません':'豆を登録しましょう'}</div>`;return;}
+  el.innerHTML=list.map(b=>{
+    const fin=b.status==='fin';
+    return `<div class="item">
+      <div class="hd"><span class="t">${b.name}</span>
+        <span class="bean-st ${fin?'fin':'act'}">${fin?'使い切り':'使用中'}</span></div>
+      <div class="sub">${[b.roaster,b.origin,b.roast,b.process].filter(Boolean).join(' ・ ')}</div>
+      ${b.notes?`<div class="sub">🫧 ${b.notes}</div>`:''}
+      <div class="sub">${b.date?`焙煎 ${b.date}（${ageStr(b)}）`:'焙煎日未設定'}</div>
+      <div class="tags" style="margin-top:9px">
+        <button class="btn ghost sm" onclick="editBean('${b.id}')">編集</button>
+        <button class="btn ${fin?'yellow':'ghost'} sm" onclick="toggleFin('${b.id}')">${fin?'使用中に戻す':'✓ 使い切り'}</button>
+      </div></div>`;
+  }).join('');
+}
+function toggleFin(id){const b=beans.find(x=>x.id===id);b.status=b.status==='fin'?'act':'fin';save(KB,beans);renderBeans();}
+function beanForm(id){
+  const b=id?beans.find(x=>x.id===id):null;
+  document.getElementById('beanEditTitle').textContent=b?'豆を編集':'豆を登録';
+  document.getElementById('bId').value=b?b.id:'';
+  document.getElementById('bName').value=b?b.name:'';
+  document.getElementById('bRoaster').value=b?b.roaster||'':'';
+  document.getElementById('bOrigin').value=b?b.origin||'':'';
+  document.getElementById('bRoast').value=b?b.roast||'中煎り':'中煎り';
+  document.getElementById('bDate').value=b?b.date||'':'';
+  document.getElementById('bProcess').value=b?b.process||'':'';
+  document.getElementById('bNotes').value=b?b.notes||'':'';
+  document.getElementById('bDelBtn').style.display=b?'block':'none';
+}
+function editBean(id){go('beanEdit');beanForm(id);}
+function saveBean(){
+  const name=document.getElementById('bName').value.trim();
+  if(!name){document.getElementById('bName').focus();document.getElementById('bName').style.borderColor='var(--red)';return;}
+  const id=document.getElementById('bId').value;
+  const data={name,roaster:val('bRoaster'),origin:val('bOrigin'),roast:val('bRoast'),
+    date:val('bDate'),process:val('bProcess'),notes:val('bNotes')};
+  if(id){Object.assign(beans.find(x=>x.id===id),data);}
+  else{beans.unshift({id:'bn'+Date.now(),status:'act',...data});}
+  save(KB,beans);go('beans');beanTab('act');
+}
+function deleteBean(){const id=document.getElementById('bId').value;
+  if(id&&confirm('この豆を削除しますか？')){beans=beans.filter(x=>x.id!==id);save(KB,beans);go('beans');renderBeans();}}
+function val(id){return document.getElementById(id).value.trim();}
+
+/* ===================== HISTORY ===================== */
+const LBL={acidity:'酸',sweet:'甘',body:'体',after:'余'};
+function renderBrews(){
+  const el=document.getElementById('brewList');
+  if(!brews.length){el.innerHTML='<div class="empty"><div class="big">∅</div>まだ記録がありません</div>';return;}
+  el.innerHTML=brews.map(b=>{
+    const d=new Date(b.date);const ds=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const beanTxt=b.beans&&b.beans.length?b.beans.map(x=>`${x.name}${x.g?`(${x.g}g)`:''}${x.age!=null?` ・焙煎後${x.age}日`:''}`).join(' + '):`豆${b.dose}g`;
+    const rt=Object.keys(LBL).map(k=>b.rate&&b.rate[k]?`<span class="tag">${LBL[k]}${b.rate[k]}</span>`:'').join('');
+    const stars=b.stars?`<span class="tag y">${'★'.repeat(b.stars)}</span>`:'';
+    return `<div class="item">
+      <div class="hd"><span class="t">${b.recipe}</span><span class="d">${ds}</span></div>
+      <div class="sub">${beanTxt}</div>
+      <div class="tags">${stars}${rt} ${b.again?'<span class="flag">また淹れたい</span>':''}</div>
+      ${b.note?`<div class="sub" style="margin-top:7px">“${b.note}”</div>`:''}
+      <div style="margin-top:8px"><button class="del" onclick="delBrew('${b.id}')">削除</button></div>
+    </div>`;
+  }).join('');
+}
+function delBrew(id){if(confirm('この記録を削除しますか？')){brews=brews.filter(x=>x.id!==id);save(KR,brews);renderBrews();}}
+
+/* ===================== UTIL ===================== */
+function fmt(s){return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+
+/* ===================== INIT ===================== */
+renderRecipes();
+</script>
+</body>
+</html>
