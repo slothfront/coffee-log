@@ -117,6 +117,12 @@ textarea.in{resize:vertical;min-height:54px}
 .stars{display:flex;gap:6px}
 .star{font-size:30px;line-height:1;color:#ccc;font-family:var(--disp)}
 .star.on{color:var(--yellow);text-shadow:1.5px 1.5px 0 var(--ink)}
+.score-box{border:var(--line);background:#fff;padding:16px 16px 12px;margin:8px 0 2px}
+.score-val{font-family:var(--disp);font-weight:900;font-size:54px;line-height:1;text-align:center;margin-bottom:14px}
+.score-slider{width:100%;-webkit-appearance:none;appearance:none;height:14px;background:var(--ink);outline:none;display:block}
+.score-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;background:var(--red);border:3px solid var(--ink);cursor:pointer}
+.score-slider::-moz-range-thumb{width:30px;height:30px;background:var(--red);border:3px solid var(--ink);cursor:pointer;border-radius:0}
+.score-scale{display:flex;justify-content:space-between;font-family:var(--disp);font-weight:800;font-size:12px;margin-top:7px;opacity:.6}
 .toggle{display:flex;align-items:center;gap:10px;border:var(--line);background:#fff;padding:12px;margin:10px 0}
 .toggle .sw{width:52px;height:30px;border:var(--line);background:#fff;position:relative;flex:none}
 .toggle .sw b{position:absolute;top:2px;left:2px;width:22px;height:22px;background:var(--ink);transition:.15s}
@@ -191,6 +197,16 @@ textarea.in{resize:vertical;min-height:54px}
       <button onclick="bump(1)">+</button>
     </div>
     <div class="muted">豆を選ぶと合計量が自動で入ります。ブレンドは複数選択できます。</div>
+  </div>
+
+  <div class="box">
+    <h3>挽き目<span style="font-weight:500;font-size:11px;opacity:.6"> ／ グラインダー設定・記録用</span></h3>
+    <div class="score-box" style="border:none;padding:4px 0 2px;margin:0">
+      <div class="score-val" id="grindVal">5.0</div>
+      <input type="range" class="score-slider" id="grindSlider" min="1" max="10" step="0.1" value="5.0">
+      <div class="score-scale"><span>1 細</span><span>粗 10</span></div>
+    </div>
+    <div class="muted" id="grindHint"></div>
   </div>
 
   <div class="box">
@@ -328,11 +344,11 @@ const RECIPES=[
   base:27,grind:'中細〜中挽き',temp:'94℃',water:200,ice:130,
   steps:[
    {atSec:0,pour:40,cum:40,blm:true,tip:'サーバーに氷をセットしてから開始。45秒蒸らし'},
-   {atSec:55,pour:40,cum:80},
-   {atSec:75,pour:40,cum:120},
-   {atSec:95,pour:40,cum:160},
-   {atSec:115,pour:40,cum:200}],
-  finishSec:135,finishTip:'2:15〜2:30で落ちきり → すぐかき混ぜて急冷'},
+   {atSec:45,pour:40,cum:80},
+   {atSec:65,pour:40,cum:120},
+   {atSec:85,pour:40,cum:160},
+   {atSec:105,pour:40,cum:200}],
+  finishSec:125,finishTip:'2:05〜2:20で落ちきり → すぐかき混ぜて急冷'},
 
  {id:'hg_aero_h',group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス ホット',type:'hot',method:'エアロプレス（インバート）',
   base:20,grind:'中挽き(紙)／中粗(金属)',temp:'—',water:290,ice:0,
@@ -391,7 +407,25 @@ const RECIPES=[
    {atSec:120,pour:30,cum:240,tip:'この辺りからお湯の抜けが遅くなる'},
    {atSec:135,pour:30,cum:270},
    {atSec:150,pour:30,cum:300,tip:'注ぎきり'}],
-  finishSec:210,finishTip:'約3:30で全量が落ちきったら完成'}
+  finishSec:210,finishTip:'約3:30で全量が落ちきったら完成'},
+
+ {id:'bb_fp',group:'ブルーボトル',name:'フレンチプレス',type:'hot',method:'フレンチプレス',
+  base:28,grind:'粗挽き（ビーチの砂くらい）',temp:'92℃',water:355,ice:0,
+  steps:[
+   {atSec:0,pour:355,cum:355,blm:true,tip:'容器を予熱→豆に355gをゆっくり注ぐ。箸でやさしく混ぜ、金網を表面の1.3cm上にセット'},
+   {atSec:180,pour:0,cum:355,tip:'金網を一度取る。コク重視→軽く混ぜる／すっきり→浮いた粉だけ除く'},
+   {atSec:195,pour:0,cum:355,tip:'15〜20秒かけて底まで押し下げる（抵抗ゼロ=粗すぎ／重い=細かすぎ）'}],
+  finishSec:200,finishTip:'押し下げたら放置せずすぐカップへ（過抽出防止）',
+  extra:'比率の目安＝あっさり15:1（豆20g）／基本12:1（豆28g）／濃いめ10:1（豆35g）。ミルク・砂糖・深煎りなら豆を増やす。'},
+
+ {id:'bb_po',group:'ブルーボトル',name:'ポアオーバー',type:'hot',method:'ポアオーバー（ドリッパー）',
+  base:25,grind:'中細（指で押すと塊・少しザラつき）',temp:'85〜96℃',water:300,ice:0,
+  steps:[
+   {atSec:0,pour:50,cum:50,blm:true,tip:'中心に25mm（25¢硬貨）大の円で少量。1滴も落とさず豆全体を均一に湿らせる。30〜40秒蒸らし'},
+   {atSec:40,pour:130,cum:180,tip:'本注ぎ開始。中心に小さな円で一定方向。マッシュルームをドリッパー2/3の高さでキープ（毎秒1〜2ml）'},
+   {atSec:120,pour:120,cum:300,tip:'同じ速度で300mlまで。水面を上下させない'}],
+  finishSec:170,finishTip:'目的の量で外す。フィルターの残り湯は全部落とし切らない方が美味しい',
+  extra:'比率の目安＝15:1（豆20g）〜10:1（豆30g）。焙煎1週間以上前の豆は蒸らしを最長60秒まで。'}
 ];
 
 /* ===================== STORE ===================== */
@@ -425,12 +459,16 @@ function renderRecipes(){
 }
 
 /* ===================== SETUP ===================== */
-let cur=null,dose=20,pickG={}; // pickG: beanId -> grams
+let cur=null,dose=20,pickG={},grindSet=5.0; // pickG: beanId -> grams
 function openSetup(id){
   cur=RECIPES.find(r=>r.id===id);dose=cur.base;pickG={};
   document.getElementById('setupGroup').textContent=cur.group;
   document.getElementById('setupName').textContent=cur.name;
   document.getElementById('setupBase').textContent=`基準 豆${cur.base}g／湯${cur.water}g`+(cur.ice?`／氷${cur.ice}g`:'')+`・${cur.grind}・${cur.temp}`;
+  grindSet=5.0;
+  const gs=document.getElementById('grindSlider');gs.value=5.0;document.getElementById('grindVal').textContent='5.0';
+  gs.oninput=()=>{grindSet=parseFloat(gs.value);document.getElementById('grindVal').textContent=grindSet.toFixed(1);};
+  document.getElementById('grindHint').textContent=`推奨：${cur.grind}`;
   renderBeanPick();syncDose();renderScaled();go('setup');
 }
 function bump(d){dose=Math.max(5,dose+d);document.getElementById('doseVal').textContent=dose;document.getElementById('doseSrc').textContent='';renderScaled();}
@@ -550,7 +588,7 @@ function saveBrew(){
   brews.unshift({
     id:'br'+Date.now(),date:new Date().toISOString(),
     recipe:cur.name,group:cur.group,dose,beans:used,
-    rate:{...recRate},stars:recStars,
+    rate:{...recRate},stars:recStars,grind:grindSet,
     again:document.getElementById('recAgain').classList.contains('on'),
     note:document.getElementById('recNote').value.trim()
   });
@@ -621,11 +659,12 @@ function renderBrews(){
     const d=new Date(b.date);const ds=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     const beanTxt=b.beans&&b.beans.length?b.beans.map(x=>`${x.name}${x.g?`(${x.g}g)`:''}${x.age!=null?` ・焙煎後${x.age}日`:''}`).join(' + '):`豆${b.dose}g`;
     const rt=Object.keys(LBL).map(k=>b.rate&&b.rate[k]?`<span class="tag">${LBL[k]}${b.rate[k]}</span>`:'').join('');
-    const stars=b.stars?`<span class="tag y">${'★'.repeat(b.stars)}</span>`:'';
+    const stars=b.stars?`<span class="tag y">${'★'.repeat(b.stars)}</span>`:(b.score!=null?`<span class="tag y">総合 ${(+b.score).toFixed(1)}</span>`:'');
+    const grindTag=(b.grind!=null)?`<span class="tag">挽 ${(+b.grind).toFixed(1)}</span>`:'';
     return `<div class="item">
       <div class="hd"><span class="t">${b.recipe}</span><span class="d">${ds}</span></div>
       <div class="sub">${beanTxt}</div>
-      <div class="tags">${stars}${rt} ${b.again?'<span class="flag">また淹れたい</span>':''}</div>
+      <div class="tags">${stars}${grindTag}${rt} ${b.again?'<span class="flag">また淹れたい</span>':''}</div>
       ${b.note?`<div class="sub" style="margin-top:7px">“${b.note}”</div>`:''}
       <div style="margin-top:8px"><button class="del" onclick="delBrew('${b.id}')">削除</button></div>
     </div>`;
