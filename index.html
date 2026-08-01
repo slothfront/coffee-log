@@ -142,6 +142,25 @@ textarea.in{resize:vertical;min-height:54px}
 .lb .cl{font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper);opacity:.8}
 .busy{font-size:12px;font-weight:700;opacity:.7}
 
+/* ---- alerts ---- */
+.alrt{border:var(--line);background:#fff;color:var(--ink);font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.06em;padding:9px 10px;flex:1;opacity:.45}
+.alrt.on{opacity:1;background:var(--yellow)}
+
+/* ---- drink window ---- */
+.drink{display:inline-block;margin-top:7px;border:2px solid var(--ink);padding:2px 7px;font-weight:800;font-size:11px}
+.drink.now{background:var(--yellow)}
+.drink.early{background:#fff;opacity:.7}
+.drink.over{background:var(--red);color:#fff}
+
+/* ---- stats ---- */
+.stat{border:var(--line);background:#fff;padding:13px;margin-bottom:11px}
+.stat h4{font-family:var(--disp);font-weight:900;font-size:17px;text-transform:uppercase;margin-bottom:8px}
+.stat .kv{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;font-weight:600;margin-bottom:8px}
+.stat .kv b{font-family:var(--disp);font-size:16px}
+.stat .best{border-left:6px solid var(--red);padding:5px 0 5px 10px;font-size:12.5px;font-weight:600;margin:8px 0}
+.stat svg{display:block;width:100%;height:auto;border:2px solid var(--ink);background:var(--paper);margin-top:6px}
+.stat .lgd{font-size:11px;opacity:.7;margin-top:5px}
+
 /* ---- drawdown ---- */
 .draw-note{font-size:12px;border-left:6px solid var(--red);padding:6px 0 6px 10px;margin:8px 0 0;font-weight:600}
 .mmss{display:flex;gap:8px;align-items:center}
@@ -260,6 +279,10 @@ textarea.in{resize:vertical;min-height:54px}
     <button class="btn yellow" id="tPlay" onclick="toggleTimer()">スタート</button>
     <button class="btn ghost sm" style="flex:none;width:auto;padding:16px 18px" onclick="resetTimer()">⟲</button>
   </div>
+  <div class="row" style="justify-content:center">
+    <button class="alrt on" id="alSound" onclick="toggleAlert('sound')">🔔 音 ON</button>
+    <button class="alrt on" id="alVibe" onclick="toggleAlert('vibe')">📳 バイブ ON</button>
+  </div>
   <button class="btn blue" id="tDraw" onclick="stampDraw()">⏱ 落ち切りを記録</button>
   <div class="draw-note" id="tDrawNote" style="display:none"></div>
   <div class="pour-list" id="pourList"></div>
@@ -335,6 +358,15 @@ textarea.in{resize:vertical;min-height:54px}
   </div>
   <div class="busy" id="photoBusy" style="display:none">写真を取り込み中…</div>
 
+  <div class="box" style="margin-top:12px">
+    <h3>カードから貼り付け<span style="font-weight:500;font-size:11px;opacity:.6"> ／ 任意</span></h3>
+    <div class="muted">「指示文をコピー」→ Claudeアプリでカードの写真と一緒に送る → 返ってきた内容をここに貼って「読み込む」。下の項目が一度に埋まります。</div>
+    <button class="btn ghost sm" onclick="copyPrompt()" id="promptBtn">指示文をコピー</button>
+    <textarea class="in" id="bPaste" style="margin-top:8px" placeholder='{"name":"…","roaster":"…"} でも「名前：…」の行でも読めます'></textarea>
+    <button class="btn yellow sm" id="pasteBtn" style="margin-top:8px" onclick="applyPaste()">読み込む</button>
+    <div class="muted" id="pasteMsg"></div>
+  </div>
+
   <label class="fld">名前 ／ 必須</label>
   <input class="in" id="bName" placeholder="例：エチオピア イルガチェフェ">
   <label class="fld">ロースター</label>
@@ -349,6 +381,15 @@ textarea.in{resize:vertical;min-height:54px}
   <input class="in" id="bProcess" placeholder="例：ウォッシュド／ナチュラル">
   <label class="fld">フレーバーノート ／ 任意</label>
   <input class="in" id="bNotes" placeholder="例：ベリー・紅茶・ジャスミン">
+  <label class="fld">飲みごろ ／ 焙煎後の日数（カードの Good Time to Drink）</label>
+  <div class="row">
+    <input class="in" id="bFrom" type="number" inputmode="numeric" min="0" placeholder="21" style="text-align:center">
+    <span style="font-weight:800">〜</span>
+    <input class="in" id="bTo" type="number" inputmode="numeric" min="0" placeholder="63" style="text-align:center">
+    <span style="font-weight:700;font-size:13px">日</span>
+  </div>
+  <label class="fld">詳細 ／ 品種・標高・生産者など・任意</label>
+  <input class="in" id="bDetail" placeholder="例：Caturra／1,950m／Hector Bonilla Solis／La Loma">
   <div class="spacer"></div>
   <button class="btn red" onclick="saveBean()">保存する</button>
   <div class="spacer"></div>
@@ -359,7 +400,12 @@ textarea.in{resize:vertical;min-height:54px}
 <section id="history" class="screen">
   <div class="eyebrow">BREW LOG</div>
   <h2 class="h-title">記録</h2>
+  <div class="seg">
+    <button id="segLog" class="on" onclick="histTab('log')">一覧</button>
+    <button id="segStat" onclick="histTab('stat')">振り返り</button>
+  </div>
   <div id="brewList"></div>
+  <div id="statView" style="display:none"></div>
 </section>
 
 <!-- ============ LIGHTBOX ============ -->
@@ -372,7 +418,7 @@ textarea.in{resize:vertical;min-height:54px}
 <nav class="nav">
   <button id="nav-home" class="on" onclick="go('home')"><span class="ic c"></span>淹れる</button>
   <button id="nav-beans" onclick="go('beans');renderBeans()"><span class="ic t"></span>豆</button>
-  <button id="nav-history" onclick="go('history');renderBrews()"><span class="ic"></span>記録</button>
+  <button id="nav-history" onclick="go('history');histTab(histTabState)"><span class="ic"></span>記録</button>
 </nav>
 
 <script>
@@ -594,7 +640,7 @@ function renderBeanPick(){
     const sel=pickG[b.id]!==undefined;
     const g=sel?pickG[b.id]:'';
     return `<span class="chip ${sel?'sel':''}">
-      <span onclick="toggleBean('${b.id}')">${b.name}${ageStr(b)?` ・${ageStr(b)}`:''}</span>
+      <span onclick="toggleBean('${b.id}')">${b.name}${ageStr(b)?` ・${ageStr(b)}`:''}${(()=>{const d=drinkState(b);return d&&d.k==='now'?' ・飲みごろ':d&&d.k==='over'?' ・ピーク過ぎ':'';})()}</span>
       ${sel?`<input class="g" type="number" inputmode="numeric" value="${g}" placeholder="g" onchange="setBeanG('${b.id}',this.value)">g`:''}
     </span>`;
   }).join('');
@@ -628,9 +674,71 @@ function renderScaled(){
 }
 
 /* ===================== TIMER ===================== */
-let tInt=null,tSec=0,tRun=false,tStepsCache=[],drawSec=null;
+let tInt=null,tSec=0,tRun=false,tStepsCache=[],drawSec=null,tStart=0,fired=new Set();
 function startBrew(){tStepsCache=scale();resetTimer();go('timer');renderPourList();}
-function resetTimer(){stopTimer();tSec=0;tRun=false;drawSec=null;updTimer();paintDraw();document.getElementById('tPlay').textContent='スタート';}
+function resetTimer(){stopTimer();tSec=0;tRun=false;drawSec=null;fired.clear();updTimer();paintDraw();document.getElementById('tPlay').textContent='スタート';}
+
+/* ---- 通知（音・バイブ）。赤ちゃんが寝ている時など切れるようにしておく ---- */
+const KA='coffee_alert';
+let alertCfg=(()=>{try{return Object.assign({sound:true,vibe:true},JSON.parse(localStorage.getItem(KA))||{})}catch(e){return{sound:true,vibe:true}}})();
+let actx=null;
+function unlockAudio(){
+  try{
+    if(!actx&&(window.AudioContext||window.webkitAudioContext))actx=new (window.AudioContext||window.webkitAudioContext)();
+    if(actx&&actx.state==='suspended')actx.resume();
+  }catch(e){actx=null;}
+}
+function beep(times,freq,dur){
+  if(!alertCfg.sound||!actx)return;
+  for(let n=0;n<times;n++){
+    const t=actx.currentTime+n*(dur+.08),o=actx.createOscillator(),g=actx.createGain();
+    o.type='sine';o.frequency.value=freq;
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.exponentialRampToValueAtTime(.3,t+.012);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+dur+.03);
+  }
+}
+function buzz(pat){if(alertCfg.vibe&&navigator.vibrate){try{navigator.vibrate(pat)}catch(e){}}}
+function toggleAlert(k){
+  alertCfg[k]=!alertCfg[k];
+  try{localStorage.setItem(KA,JSON.stringify(alertCfg))}catch(e){}
+  if(alertCfg[k]){unlockAudio();if(k==='sound')beep(1,880,.08);else buzz(120);}
+  paintAlertBtns();
+}
+function paintAlertBtns(){
+  const s=document.getElementById('alSound'),v=document.getElementById('alVibe');
+  s.className='alrt'+(alertCfg.sound?' on':'');s.textContent=alertCfg.sound?'🔔 音 ON':'🔕 音 OFF';
+  v.className='alrt'+(alertCfg.vibe?' on':'');v.textContent=alertCfg.vibe?'📳 バイブ ON':'📴 バイブ OFF';
+}
+/* 一度きりの発火。画面オフから復帰して秒が飛んだ場合は、鳴らさず「済み」だけにする */
+function fireOnce(key,at,fn){
+  if(fired.has(key)||tSec<at)return;
+  fired.add(key);
+  if(tSec-at<=2)fn();
+}
+function checkAlerts(){
+  tStepsCache.forEach((s,i)=>{
+    if(s.atSec<=0)return;
+    if(s.pourS>0)fireOnce('p'+i,s.atSec-3,()=>beep(1,660,.07));      // 3秒前の予告
+    fireOnce('n'+i,s.atSec,()=>{beep(2,880,.1);buzz([180,90,180]);}); // 注ぐタイミング
+  });
+  if(cur.finishSec)fireOnce('fin',cur.finishSec,()=>{beep(3,1046,.12);buzz([260,120,260,120,260]);});
+}
+
+/* ---- 抽出中は画面を消させない（消えるとタイマーも通知も止まるため） ---- */
+let wakeLock=null;
+async function keepAwake(on){
+  try{
+    if(!('wakeLock' in navigator))return;
+    if(on){if(!wakeLock)wakeLock=await navigator.wakeLock.request('screen');}
+    else if(wakeLock){await wakeLock.release();wakeLock=null;}
+  }catch(e){wakeLock=null;}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  if(tRun){keepAwake(true);tick();}     // 復帰時は実時刻から即座に追いつく
+});
 
 /* ---- 落ち切り（ドリップ以外は「抽出完了」） ---- */
 function drawTerm(){return cur&&cur.drawdown===false?'抽出完了':'落ち切り';}
@@ -659,11 +767,21 @@ function drawAdvice(sec){
     ?'落ちが速い＝挽き目が粗いかも。味が薄ければ次回は少し細かく。'
     :'落ちが遅い＝挽き目が細かいかも。渋み・雑味が出ていたら次回は少し粗く。');
 }
-function stopTimer(){if(tInt){clearInterval(tInt);tInt=null;}tRun=false;}
+function stopTimer(){if(tInt){clearInterval(tInt);tInt=null;}tRun=false;keepAwake(false);}
+/* 経過は加算ではなく実時刻から求める（画面オフ中もブラウザに数えさせない） */
+function tick(){
+  const s=Math.max(0,Math.floor((Date.now()-tStart)/1000));
+  if(s===tSec)return;
+  tSec=s;updTimer();checkAlerts();
+}
 function toggleTimer(){
   if(tRun){stopTimer();document.getElementById('tPlay').textContent='再開';}
-  else{tRun=true;document.getElementById('tPlay').textContent='一時停止';
-    tInt=setInterval(()=>{tSec++;updTimer();},1000);}
+  else{
+    unlockAudio();keepAwake(true);
+    tRun=true;tStart=Date.now()-tSec*1000;
+    document.getElementById('tPlay').textContent='一時停止';
+    tInt=setInterval(tick,200);
+  }
 }
 function curStepIndex(){let idx=-1;tStepsCache.forEach((s,i)=>{if(tSec>=s.atSec)idx=i;});return idx;}
 function updTimer(){
@@ -746,7 +864,7 @@ function saveBrew(){
     again:document.getElementById('recAgain').classList.contains('on'),
     note:document.getElementById('recNote').value.trim()
   });
-  save(KR,brews);go('history');renderBrews();
+  save(KR,brews);go('history');histTab('log');
 }
 
 /* ===================== BEANS ===================== */
@@ -772,7 +890,9 @@ function renderBeans(){
             <span class="bean-st ${fin?'fin':'act'}">${fin?'使い切り':'使用中'}</span></div>
           <div class="sub">${[b.roaster,b.origin,b.roast,b.process].filter(Boolean).join(' ・ ')}</div>
           ${b.notes?`<div class="sub">🫧 ${b.notes}</div>`:''}
+          ${b.detail?`<div class="sub">📋 ${b.detail}</div>`:''}
           <div class="sub">${b.date?`焙煎 ${b.date}（${ageStr(b)}）`:'焙煎日未設定'}</div>
+          ${(()=>{const d=drinkState(b);return d?`<span class="drink ${d.k}">${d.s}</span>`:'';})()}
         </div>
       </div>
       <div class="tags" style="margin-top:9px">
@@ -840,6 +960,94 @@ function closeLb(){
   document.getElementById('lbImg').removeAttribute('src');
 }
 
+/* ---- カード情報の貼り付け登録 ---- */
+const PROMPT=`このコーヒー豆のカード（またはパッケージ）の写真を読んで、次のJSONだけを返してください。読み取れない項目は空のままにしてください。説明文は不要です。
+{"name":"銘柄（農園名など短く）","roaster":"","origin":"国／地域","roast":"浅煎り｜中煎り｜中深煎り｜深煎り","date":"焙煎日 YYYY-MM-DD","process":"精製","notes":"フレーバーノート","drinkFrom":飲みごろ開始の焙煎後日数,"drinkTo":飲みごろ終了の焙煎後日数,"detail":"品種・標高・生産者・農園を1行で"}`;
+async function copyPrompt(){
+  const btn=document.getElementById('promptBtn');
+  let done=false;
+  try{await navigator.clipboard.writeText(PROMPT);done=true;}
+  catch(e){
+    const ta=document.getElementById('bPaste');
+    ta.value=PROMPT;ta.select();
+    try{done=document.execCommand('copy')}catch(e2){}
+    if(done)ta.value='';
+  }
+  btn.textContent=done?'コピーしました':'コピーできません（下の欄に出しました）';
+  setTimeout(()=>{btn.textContent='指示文をコピー';},2000);
+}
+const PASTE_KEYS={
+  name:['name','名前','銘柄','豆名','豆'],
+  roaster:['roaster','ロースター','焙煎所','店'],
+  origin:['origin','原産国','原産','生産国','産地','地域','国'],
+  roast:['roast','焙煎度','ロースト'],
+  date:['date','焙煎日','ローストデート'],
+  process:['process','精製','精製方法'],
+  notes:['notes','フレーバー','フレーバーノート','風味','テイスト'],
+  drinkFrom:['drinkfrom','飲みごろ開始','飲み頃開始'],
+  drinkTo:['drinkto','飲みごろ終了','飲み頃終了'],
+  drink:['drink','飲みごろ','飲み頃','goodtimetodrink'],
+  detail:['detail','詳細','その他','備考','品種']
+};
+function normKey(k){
+  const s=String(k).toLowerCase().replace(/[\s_・]/g,'');
+  for(const f in PASTE_KEYS)if(PASTE_KEYS[f].some(a=>a.replace(/\s/g,'')===s))return f;
+  return null;
+}
+function normDate(v){
+  const m=String(v).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  return m?`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`:'';
+}
+function normRoast(v){
+  const s=String(v);
+  return ['中深煎り','浅煎り','中煎り','深煎り'].find(o=>s.includes(o))||'';
+}
+function parsePaste(txt){
+  const out={};
+  const put=(k,v)=>{
+    if(v===undefined||v===null||v==='')return;
+    if(k==='drink'){const m=String(v).match(/(\d+)\D+(\d+)/);if(m){out.drinkFrom=+m[1];out.drinkTo=+m[2];}return;}
+    if(k==='date'){const d=normDate(v);if(d)out.date=d;return;}
+    if(k==='roast'){const r=normRoast(v);if(r)out.roast=r;return;}
+    if(k==='drinkFrom'||k==='drinkTo'){const n=parseInt(v,10);if(!isNaN(n))out[k]=n;return;}
+    out[k]=String(v).trim();
+  };
+  const json=txt.match(/\{[\s\S]*\}/);
+  if(json){
+    try{
+      const o=JSON.parse(json[0]);
+      Object.keys(o).forEach(k=>{const f=normKey(k);if(f)put(f,o[k]);});
+      if(Object.keys(out).length)return out;
+    }catch(e){/* JSONでなければ行として読む */}
+  }
+  txt.split(/\r?\n/).forEach(line=>{
+    const m=line.match(/^\s*[-・*]?\s*([^:：]{1,20})[:：](.*)$/);
+    if(!m)return;
+    const f=normKey(m[1]);
+    if(f)put(f,m[2].trim());
+  });
+  return out;
+}
+function applyPaste(){
+  const txt=document.getElementById('bPaste').value.trim(),msg=document.getElementById('pasteMsg');
+  if(!txt){msg.textContent='貼り付けてから「読み込む」を押してください。';return;}
+  const o=parsePaste(txt),keys=Object.keys(o);
+  if(!keys.length){msg.textContent='読み取れませんでした。JSONか「名前：〇〇」の形で貼り付けてください。';return;}
+  const F={name:'bName',roaster:'bRoaster',origin:'bOrigin',roast:'bRoast',date:'bDate',
+           process:'bProcess',notes:'bNotes',drinkFrom:'bFrom',drinkTo:'bTo',detail:'bDetail'};
+  keys.forEach(k=>{if(F[k])document.getElementById(F[k]).value=o[k];});
+  msg.textContent=`${keys.length}項目を読み込みました。内容を確認して保存してください。`;
+}
+
+/* ---- 飲みごろ（焙煎後日数とカードの範囲から判定） ---- */
+function drinkState(b){
+  const a=ageDays(b),f=+b.drinkFrom||0,t=+b.drinkTo||0;
+  if(a===null||(!f&&!t))return null;
+  if(f&&a<f)return{k:'early',s:`あと${f-a}日で飲みごろ`};
+  if(t&&a>t)return{k:'over',s:`飲みごろ過ぎ（${f||'?'}〜${t}日）`};
+  return{k:'now',s:`飲みごろ（${f||'?'}〜${t||'?'}日）`};
+}
+
 function beanForm(id){
   const b=id?beans.find(x=>x.id===id):null;
   clearPending();editPhotoKey=b?b.photo||null:null;dropExisting=false;paintPhoto();
@@ -852,6 +1060,11 @@ function beanForm(id){
   document.getElementById('bDate').value=b?b.date||'':'';
   document.getElementById('bProcess').value=b?b.process||'':'';
   document.getElementById('bNotes').value=b?b.notes||'':'';
+  document.getElementById('bFrom').value=b&&b.drinkFrom?b.drinkFrom:'';
+  document.getElementById('bTo').value=b&&b.drinkTo?b.drinkTo:'';
+  document.getElementById('bDetail').value=b?b.detail||'':'';
+  document.getElementById('bPaste').value='';
+  document.getElementById('pasteMsg').textContent='';
   document.getElementById('bDelBtn').style.display=b?'block':'none';
 }
 function editBean(id){beanReturnTo='beans';document.getElementById('beanBack').textContent='豆一覧';go('beanEdit');beanForm(id);}
@@ -871,8 +1084,10 @@ async function saveBean(){
   }else if(dropExisting&&editPhotoKey){
     await photoDel(editPhotoKey);dropPhotoURL(editPhotoKey);photo=null;
   }
+  const num=id2=>{const n=parseInt(val(id2),10);return isNaN(n)||n<0?null:n;};
   const data={name,roaster:val('bRoaster'),origin:val('bOrigin'),roast:val('bRoast'),
-    date:val('bDate'),process:val('bProcess'),notes:val('bNotes'),photo};
+    date:val('bDate'),process:val('bProcess'),notes:val('bNotes'),detail:val('bDetail'),
+    drinkFrom:num('bFrom'),drinkTo:num('bTo'),photo};
   if(id){Object.assign(beans.find(x=>x.id===id),data);}
   else{beans.unshift({id:'bn'+Date.now(),status:'act',...data});}
   save(KB,beans);
@@ -917,11 +1132,82 @@ function renderBrews(){
 }
 function delBrew(id){if(confirm('この記録を削除しますか？')){brews=brews.filter(x=>x.id!==id);save(KR,brews);renderBrews();}}
 
+/* ===================== 振り返り ===================== */
+let histTabState='log';
+function histTab(t){
+  histTabState=t;
+  document.getElementById('segLog').classList.toggle('on',t==='log');
+  document.getElementById('segStat').classList.toggle('on',t==='stat');
+  document.getElementById('brewList').style.display=t==='log'?'block':'none';
+  document.getElementById('statView').style.display=t==='stat'?'block':'none';
+  if(t==='stat')renderStats();else renderBrews();
+}
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+/* 挽き目（横）×落ち切り（縦）を★で色分けした散布図。狙いの設定が目で分かるように */
+function scatter(list,target){
+  const pts=list.filter(b=>b.drawSec!=null&&b.grind!=null);
+  if(pts.length<2)return'<div class="lgd">落ち切りと挽き目がそろった記録が2回分たまると、ここに散布図が出ます。</div>';
+  const W=320,H=150,L=34,R=10,T=12,B=26;
+  const ys=pts.map(p=>p.drawSec).concat(target?[target]:[]);
+  let y0=Math.min(...ys),y1=Math.max(...ys);
+  if(y1===y0){y0-=10;y1+=10;}
+  const sx=g=>L+((Math.min(10,Math.max(1,g))-1)/9)*(W-L-R);
+  const sy=v=>T+(1-(v-y0)/(y1-y0))*(H-T-B);
+  const col=s=>s>=4?'#e2342b':s===3?'#1f50a0':'#8a8578';
+  const dots=pts.map(p=>`<circle cx="${sx(p.grind).toFixed(1)}" cy="${sy(p.drawSec).toFixed(1)}" r="${p.stars>=4?7:5}" fill="${col(p.stars||0)}" stroke="#16140f" stroke-width="2"/>`).join('');
+  const tline=target&&target>=y0&&target<=y1
+    ?`<line x1="${L}" y1="${sy(target).toFixed(1)}" x2="${W-R}" y2="${sy(target).toFixed(1)}" stroke="#16140f" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="${W-R}" y="${(sy(target)-4).toFixed(1)}" text-anchor="end" font-size="10" fill="#16140f">目安 ${fmt(target)}</text>`:'';
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="#16140f" stroke-width="2"/>
+    <line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#16140f" stroke-width="2"/>
+    ${tline}${dots}
+    <text x="2" y="${T+9}" font-size="10" fill="#16140f">${fmt(Math.round(y1))}</text>
+    <text x="2" y="${H-B}" font-size="10" fill="#16140f">${fmt(Math.round(y0))}</text>
+    <text x="${L}" y="${H-8}" font-size="10" fill="#16140f">挽き目 1（細）</text>
+    <text x="${W-R}" y="${H-8}" font-size="10" text-anchor="end" fill="#16140f">10（粗）</text>
+  </svg>
+  <div class="lgd">縦＝落ち切り時間／横＝挽き目。<span style="color:#e2342b;font-weight:800">●</span> ★4以上　<span style="color:#1f50a0;font-weight:800">●</span> ★3　<span style="color:#8a8578;font-weight:800">●</span> ★2以下</div>`;
+}
+function renderStats(){
+  const el=document.getElementById('statView');
+  if(!brews.length){el.innerHTML='<div class="empty"><div class="big">∅</div>記録がたまると、ここで振り返れます</div>';return;}
+  const groups={};
+  brews.forEach(b=>{(groups[b.recipe]=groups[b.recipe]||[]).push(b);});
+  el.innerHTML=Object.keys(groups).map(name=>{
+    const list=groups[name];
+    const target=list.find(b=>b.targetSec)?.targetSec||null;
+    const draws=list.filter(b=>b.drawSec!=null).map(b=>b.drawSec);
+    const stars=list.filter(b=>b.stars).map(b=>b.stars);
+    const grinds=list.filter(b=>b.grind!=null).map(b=>+b.grind);
+    const dAvg=avg(draws),sAvg=avg(stars),gAvg=avg(grinds);
+    const diff=dAvg!=null&&target?Math.round(dAvg-target):null;
+    const label=list[0].drawLabel||'落ち切り';
+    const rated=list.filter(b=>b.stars>=1).sort((a,b)=>b.stars-a.stars);
+    const best=rated[0];
+    const bestTxt=best
+      ?`ベストは ★${best.stars}（${new Date(best.date).getMonth()+1}/${new Date(best.date).getDate()}）：挽き目 ${best.grind!=null?(+best.grind).toFixed(1):'—'}／${label} ${best.drawSec!=null?fmt(best.drawSec):'未記録'}／豆 ${best.dose}g${best.beans&&best.beans.length?`（${best.beans.map(x=>x.name).join(' + ')}）`:''}`
+      :'★をつけた記録がまだありません。評価をためると「当たりの設定」がここに出ます。';
+    return `<div class="stat">
+      <h4>${name}</h4>
+      <div class="kv">
+        <span>回数 <b>${list.length}</b></span>
+        <span>★平均 <b>${sAvg!=null?sAvg.toFixed(1):'—'}</b></span>
+        <span>${label}平均 <b>${dAvg!=null?fmt(Math.round(dAvg)):'—'}</b>${diff!=null?`（目安${diff>0?'+':'−'}${Math.abs(diff)}s）`:''}</span>
+        <span>挽き目平均 <b>${gAvg!=null?gAvg.toFixed(1):'—'}</b></span>
+      </div>
+      <div class="best">${bestTxt}</div>
+      ${scatter(list,target)}
+    </div>`;
+  }).join('');
+}
+
 /* ===================== UTIL ===================== */
 function fmt(s){return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
 
 /* ===================== INIT ===================== */
 renderRecipes();
+paintAlertBtns();
 document.getElementById('recDrawM').addEventListener('input',paintRecDraw);
 document.getElementById('recDrawS').addEventListener('input',paintRecDraw);
 (async function(){
