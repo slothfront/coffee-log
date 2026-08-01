@@ -130,6 +130,24 @@ textarea.in{resize:vertical;min-height:54px}
 .toggle.on .sw b{left:24px;background:#fff}
 .toggle .tx{font-family:var(--disp);font-weight:800;text-transform:uppercase;font-size:14px}
 
+/* ---- photo ---- */
+.ph-row{display:flex;gap:10px;align-items:flex-start}
+.ph-empty{border:2px dashed var(--ink);background:var(--paper);padding:16px;text-align:center;font-size:13px;font-weight:600;opacity:.7}
+.ph-empty small{display:block;font-weight:500;font-size:11px;opacity:.8;margin-top:5px}
+.pv{display:block;width:100%;max-height:260px;object-fit:contain;background:#fff;border:var(--line)}
+.bthumb{width:78px;height:78px;object-fit:cover;border:var(--line);flex:none;background:#fff}
+.lb{display:none;position:fixed;inset:0;background:rgba(22,20,15,.94);z-index:60;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:14px}
+.lb.on{display:flex}
+.lb img{max-width:100%;max-height:88vh;object-fit:contain;border:var(--line);background:#fff}
+.lb .cl{font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper);opacity:.8}
+.busy{font-size:12px;font-weight:700;opacity:.7}
+
+/* ---- drawdown ---- */
+.draw-note{font-size:12px;border-left:6px solid var(--red);padding:6px 0 6px 10px;margin:8px 0 0;font-weight:600}
+.mmss{display:flex;gap:8px;align-items:center}
+.mmss input{width:84px;text-align:center;font-family:var(--disp);font-weight:900;font-size:22px}
+.mmss .u{font-weight:700;font-size:13px}
+
 /* history / bean list */
 .item{border:var(--line);background:#fff;padding:12px;margin-bottom:9px}
 .item .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -212,7 +230,8 @@ textarea.in{resize:vertical;min-height:54px}
   <div class="box">
     <h3>使う豆<span style="font-weight:500;font-size:11px;opacity:.6"> ／ 任意・複数可</span></h3>
     <div id="beanPick"></div>
-    <button class="btn ghost sm" onclick="go('beanEdit');beanForm()">＋ 豆を登録</button>
+    <button class="btn ghost sm" onclick="newBean('setup',true)">📷 写真で登録</button>
+    <button class="btn ghost sm" onclick="newBean('setup',false)">＋ 手入力で登録</button>
   </div>
 
   <div id="scaledTable"></div>
@@ -241,6 +260,8 @@ textarea.in{resize:vertical;min-height:54px}
     <button class="btn yellow" id="tPlay" onclick="toggleTimer()">スタート</button>
     <button class="btn ghost sm" style="flex:none;width:auto;padding:16px 18px" onclick="resetTimer()">⟲</button>
   </div>
+  <button class="btn blue" id="tDraw" onclick="stampDraw()">⏱ 落ち切りを記録</button>
+  <div class="draw-note" id="tDrawNote" style="display:none"></div>
   <div class="pour-list" id="pourList"></div>
   <div class="spacer"></div>
   <button class="btn blue" onclick="toRecord()">淹れ終わり → 記録</button>
@@ -251,6 +272,15 @@ textarea.in{resize:vertical;min-height:54px}
   <div class="eyebrow">LOG THIS CUP</div>
   <h2 class="h-title" style="font-size:28px">記録する</h2>
   <div class="muted" id="recHead"></div>
+
+  <div class="box">
+    <h3 id="recDrawTitle">落ち切り時間</h3>
+    <div class="mmss">
+      <input class="in" id="recDrawM" type="number" inputmode="numeric" min="0" max="59" placeholder="—"><span class="u">分</span>
+      <input class="in" id="recDrawS" type="number" inputmode="numeric" min="0" max="59" placeholder="—"><span class="u">秒</span>
+    </div>
+    <div class="muted" id="recDrawNote"></div>
+  </div>
 
   <div class="box">
     <h3>味</h3>
@@ -281,16 +311,30 @@ textarea.in{resize:vertical;min-height:54px}
     <button id="segAct" class="on" onclick="beanTab('act')">使用中</button>
     <button id="segFin" onclick="beanTab('fin')">使い切り</button>
   </div>
-  <button class="btn sm" onclick="go('beanEdit');beanForm()">＋ 豆を登録</button>
+  <div class="row">
+    <button class="btn red sm" style="flex:1" onclick="newBean('beans',true)">📷 写真で登録</button>
+    <button class="btn sm" style="flex:1" onclick="newBean('beans',false)">＋ 手入力で登録</button>
+  </div>
   <div class="spacer"></div>
   <div id="beanList"></div>
 </section>
 
 <!-- ============ BEAN EDIT ============ -->
 <section id="beanEdit" class="screen">
-  <button class="back" onclick="go('beans');renderBeans()">豆一覧</button>
+  <button class="back" id="beanBack" onclick="leaveBeanEdit()">豆一覧</button>
   <h2 class="h-title" id="beanEditTitle" style="font-size:28px">豆を登録</h2>
   <input type="hidden" id="bId">
+
+  <label class="fld">写真 ／ 豆袋・BEANS LOGカードなど</label>
+  <div id="photoField"></div>
+  <input type="file" id="bPhotoCam" accept="image/*" capture="environment" style="display:none" onchange="onPhotoPick(this)">
+  <input type="file" id="bPhotoLib" accept="image/*" style="display:none" onchange="onPhotoPick(this)">
+  <div class="row" style="margin-top:8px">
+    <button class="btn ghost sm" style="flex:1" onclick="pickPhoto('cam')">📷 撮影</button>
+    <button class="btn ghost sm" style="flex:1" onclick="pickPhoto('lib')">画像を選ぶ</button>
+  </div>
+  <div class="busy" id="photoBusy" style="display:none">写真を取り込み中…</div>
+
   <label class="fld">名前 ／ 必須</label>
   <input class="in" id="bName" placeholder="例：エチオピア イルガチェフェ">
   <label class="fld">ロースター</label>
@@ -318,6 +362,12 @@ textarea.in{resize:vertical;min-height:54px}
   <div id="brewList"></div>
 </section>
 
+<!-- ============ LIGHTBOX ============ -->
+<div class="lb" id="lightbox" onclick="closeLb()">
+  <img id="lbImg" alt="豆の写真">
+  <div class="cl">タップで閉じる</div>
+</div>
+
 <!-- ============ NAV ============ -->
 <nav class="nav">
   <button id="nav-home" class="on" onclick="go('home')"><span class="ic c"></span>淹れる</button>
@@ -329,7 +379,7 @@ textarea.in{resize:vertical;min-height:54px}
 /* ===================== DATA: 8 RECIPES ===================== */
 /* steps: atSec=注ぐ秒, pour=その投の注湯g(基準), cum=累計g(基準), tip=メモ, blm=蒸らし */
 const RECIPES=[
- {id:'hg_v60_h',group:'萩原 ／ THE COFFEESHOP',name:'V60 ホット',type:'hot',method:'HARIO V60',
+ {id:'hg_v60_h',drawdown:true,group:'萩原 ／ THE COFFEESHOP',name:'V60 ホット',type:'hot',method:'HARIO V60',
   base:20,grind:'中挽き',temp:'92℃',water:300,ice:0,
   steps:[
    {atSec:0,pour:40,cum:40,blm:true,tip:'10秒以内に注ぎ終え、40秒蒸らし'},
@@ -340,7 +390,7 @@ const RECIPES=[
    {atSec:120,pour:60,cum:300}],
   finishSec:150,finishTip:'2:30〜2:45で落ちきり。寸前にドリッパーを外す'},
 
- {id:'hg_v60_i',group:'萩原 ／ THE COFFEESHOP',name:'V60 アイス',type:'ice',method:'HARIO V60',
+ {id:'hg_v60_i',drawdown:true,group:'萩原 ／ THE COFFEESHOP',name:'V60 アイス',type:'ice',method:'HARIO V60',
   base:27,grind:'中細〜中挽き',temp:'94℃',water:200,ice:130,
   steps:[
    {atSec:0,pour:40,cum:40,blm:true,tip:'サーバーに氷をセットしてから開始。45秒蒸らし'},
@@ -350,7 +400,7 @@ const RECIPES=[
    {atSec:105,pour:40,cum:200}],
   finishSec:125,finishTip:'2:05〜2:20で落ちきり → すぐかき混ぜて急冷'},
 
- {id:'hg_aero_h',group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス ホット',type:'hot',method:'エアロプレス（インバート）',
+ {id:'hg_aero_h',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス ホット',type:'hot',method:'エアロプレス（インバート）',
   base:20,grind:'中挽き(紙)／中粗(金属)',temp:'—',water:290,ice:0,
   steps:[
    {atSec:0,pour:100,cum:100,blm:true,tip:'100g注ぎパドルで10回撹拌（30秒以内）'},
@@ -359,7 +409,7 @@ const RECIPES=[
    {atSec:90,pour:90,cum:290,tip:'90g注ぎ足して濃度調整'}],
   finishSec:90,finishTip:'最後に90g注ぎ足して好みの濃度に'},
 
- {id:'hg_aero_i',group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス アイス',type:'ice',method:'エアロプレス（インバート）',
+ {id:'hg_aero_i',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス アイス',type:'ice',method:'エアロプレス（インバート）',
   base:24,grind:'中細〜中挽き',temp:'94℃',water:190,ice:130,
   steps:[
    {atSec:0,pour:100,cum:100,blm:true,tip:'氷のサーバーを用意。100g注ぎパドル10回'},
@@ -367,7 +417,7 @@ const RECIPES=[
    {atSec:60,pour:0,cum:190,tip:'逆さにして30秒かけてプレス → すぐ急冷'}],
   finishSec:60,finishTip:'プレス後すぐに急冷'},
 
- {id:'hg_fp_h',group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス ホット',type:'hot',method:'フレンチプレス',
+ {id:'hg_fp_h',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス ホット',type:'hot',method:'フレンチプレス',
   base:18,grind:'粗挽き',temp:'—',water:300,ice:0,
   steps:[
    {atSec:0,pour:150,cum:150,blm:true,tip:'150gまで回し注ぎ、30秒蒸らし'},
@@ -375,7 +425,7 @@ const RECIPES=[
    {atSec:240,pour:0,cum:300,tip:'4分でゆっくり押し下げ → 静かに注ぐ'}],
   finishSec:240,finishTip:'4分でプランジャーを押し下げる'},
 
- {id:'hg_fp_i',group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス アイス',type:'ice',method:'フレンチプレス',
+ {id:'hg_fp_i',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス アイス',type:'ice',method:'フレンチプレス',
   base:24,grind:'粗挽き',temp:'94℃',water:200,ice:130,
   steps:[
    {atSec:0,pour:100,cum:100,blm:true,tip:'100gで30秒蒸らし'},
@@ -383,7 +433,7 @@ const RECIPES=[
    {atSec:240,pour:0,cum:200,tip:'4分で押し下げ → 氷のサーバーに注いで急冷'}],
   finishSec:240,finishTip:'4分でプランジャーを押し下げる'},
 
- {id:'ks_46',group:'粕谷 ／ 4:6メソッド',name:'4:6 ベーシック',type:'hot',method:'HARIO V60',
+ {id:'ks_46',drawdown:true,group:'粕谷 ／ 4:6メソッド',name:'4:6 ベーシック',type:'hot',method:'HARIO V60',
   base:20,grind:'粗挽き',temp:'浅93／中88／深83℃',water:300,ice:0,
   steps:[
    {atSec:0,pour:60,cum:60,blm:true,tip:'蒸らし兼1投目'},
@@ -394,7 +444,7 @@ const RECIPES=[
   finishSec:210,finishTip:'3:30でドリッパーを外す',
   extra:'味＝前半120gの配分で：甘め(1投目<2投目)／明るい(1投目>2投目)。濃度＝後半の投数。'},
 
- {id:'ks_10',group:'粕谷 ／ 10投式',name:'10投式 新レシピ',type:'hot',method:'HARIO V60 NEO',
+ {id:'ks_10',drawdown:true,group:'粕谷 ／ 10投式',name:'10投式 新レシピ',type:'hot',method:'HARIO V60 NEO',
   base:20,grind:'極粗挽き',temp:'95〜96℃',water:300,ice:0,
   steps:[
    {atSec:0,pour:30,cum:30,blm:true,tip:'蒸らし'},
@@ -409,7 +459,7 @@ const RECIPES=[
    {atSec:150,pour:30,cum:300,tip:'注ぎきり'}],
   finishSec:210,finishTip:'約3:30で全量が落ちきったら完成'},
 
- {id:'bb_fp',group:'ブルーボトル',name:'フレンチプレス',type:'hot',method:'フレンチプレス',
+ {id:'bb_fp',drawdown:false,group:'ブルーボトル',name:'フレンチプレス',type:'hot',method:'フレンチプレス',
   base:28,grind:'粗挽き（ビーチの砂くらい）',temp:'92℃',water:355,ice:0,
   steps:[
    {atSec:0,pour:355,cum:355,blm:true,tip:'容器を予熱→豆に355gをゆっくり注ぐ。箸でやさしく混ぜ、金網を表面の1.3cm上にセット'},
@@ -418,7 +468,7 @@ const RECIPES=[
   finishSec:200,finishTip:'押し下げたら放置せずすぐカップへ（過抽出防止）',
   extra:'比率の目安＝あっさり15:1（豆20g）／基本12:1（豆28g）／濃いめ10:1（豆35g）。ミルク・砂糖・深煎りなら豆を増やす。'},
 
- {id:'bb_po',group:'ブルーボトル',name:'ポアオーバー',type:'hot',method:'ポアオーバー（ドリッパー）',
+ {id:'bb_po',drawdown:true,group:'ブルーボトル',name:'ポアオーバー',type:'hot',method:'ポアオーバー（ドリッパー）',
   base:25,grind:'中細（指で押すと塊・少しザラつき）',temp:'85〜96℃',water:300,ice:0,
   steps:[
    {atSec:0,pour:50,cum:50,blm:true,tip:'中心に25mm（25¢硬貨）大の円で少量。1滴も落とさず豆全体を均一に湿らせる。30〜40秒蒸らし'},
@@ -431,8 +481,66 @@ const RECIPES=[
 /* ===================== STORE ===================== */
 const KB='coffee_beans',KR='coffee_brews';
 const load=(k)=>{try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}};
-const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}
+  catch(e){alert('保存できませんでした。ブラウザの保存容量が上限のようです。古い記録を削除してからもう一度お試しください。');return false}};
 let beans=load(KB),brews=load(KR);
+
+/* ---- 写真はIndexedDBに保存（localStorageの容量を圧迫しないため） ---- */
+const MDB='coffee_media',MST='photos';
+const PH_EDGE=1400,PH_Q=.7;          // 長辺1400px・JPEG品質0.7（カードの文字が読める最小限）
+let mediaDB=null,photoURL={};        // photoキー → objectURL
+function idbOpen(){
+  return new Promise(res=>{
+    if(!('indexedDB' in window))return res(null);
+    let req;try{req=indexedDB.open(MDB,1);}catch(e){return res(null);}
+    req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(MST))db.createObjectStore(MST);};
+    req.onsuccess=()=>res(req.result);
+    req.onerror=()=>res(null);
+  });
+}
+function idbStore(mode){
+  if(!mediaDB)return null;
+  try{return mediaDB.transaction(MST,mode).objectStore(MST);}catch(e){return null;}
+}
+function photoPut(key,blob){return new Promise((res,rej)=>{
+  const st=idbStore('readwrite');if(!st)return rej(new Error('no-store'));
+  const r=st.put(blob,key);r.onsuccess=()=>res(key);r.onerror=()=>rej(r.error);});}
+function photoGet(key){return new Promise(res=>{
+  const st=idbStore('readonly');if(!st)return res(null);
+  const r=st.get(key);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);});}
+function photoDel(key){return new Promise(res=>{
+  const st=idbStore('readwrite');if(!st)return res();
+  const r=st.delete(key);r.onsuccess=()=>res();r.onerror=()=>res();});}
+async function hydratePhotos(){
+  for(const b of beans){
+    if(b.photo&&!photoURL[b.photo]){
+      const blob=await photoGet(b.photo);
+      if(blob)photoURL[b.photo]=URL.createObjectURL(blob);
+    }
+  }
+}
+function dropPhotoURL(key){
+  if(key&&photoURL[key]){URL.revokeObjectURL(photoURL[key]);delete photoURL[key];}
+}
+/* 撮った写真をそのまま抱えると数MBになるので、長辺を詰めてJPEGに焼き直す */
+async function shrinkImage(file){
+  let src=null,revoke=null;
+  try{src=await createImageBitmap(file,{imageOrientation:'from-image'});}
+  catch(e){
+    revoke=URL.createObjectURL(file);
+    src=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('decode'));im.src=revoke;});
+  }
+  const w=src.width||src.naturalWidth,h=src.height||src.naturalHeight;
+  const sc=Math.min(1,PH_EDGE/Math.max(w,h));
+  const cv=document.createElement('canvas');
+  cv.width=Math.max(1,Math.round(w*sc));cv.height=Math.max(1,Math.round(h*sc));
+  cv.getContext('2d').drawImage(src,0,0,cv.width,cv.height);
+  if(src.close)src.close();
+  if(revoke)URL.revokeObjectURL(revoke);
+  const blob=await new Promise(res=>cv.toBlob(res,'image/jpeg',PH_Q));
+  if(!blob)throw new Error('encode');
+  return blob;
+}
 
 /* ===================== NAV ===================== */
 function go(id){
@@ -520,9 +628,37 @@ function renderScaled(){
 }
 
 /* ===================== TIMER ===================== */
-let tInt=null,tSec=0,tRun=false,tStepsCache=[];
+let tInt=null,tSec=0,tRun=false,tStepsCache=[],drawSec=null;
 function startBrew(){tStepsCache=scale();resetTimer();go('timer');renderPourList();}
-function resetTimer(){stopTimer();tSec=0;tRun=false;updTimer();document.getElementById('tPlay').textContent='スタート';}
+function resetTimer(){stopTimer();tSec=0;tRun=false;drawSec=null;updTimer();paintDraw();document.getElementById('tPlay').textContent='スタート';}
+
+/* ---- 落ち切り（ドリップ以外は「抽出完了」） ---- */
+function drawTerm(){return cur&&cur.drawdown===false?'抽出完了':'落ち切り';}
+function stampDraw(){
+  if(drawSec===null){drawSec=tSec;stopTimer();document.getElementById('tPlay').textContent='再開';}
+  else{drawSec=null;}
+  paintDraw();
+}
+function paintDraw(){
+  const btn=document.getElementById('tDraw'),note=document.getElementById('tDrawNote'),term=drawTerm();
+  if(drawSec===null){btn.className='btn blue';btn.textContent=`⏱ ${term}を記録`;note.style.display='none';note.textContent='';}
+  else{
+    btn.className='btn ghost';btn.textContent=`${term} ${fmt(drawSec)} ／ タップで取り消し`;
+    const t=drawAdvice(drawSec);
+    note.style.display=t?'block':'none';note.textContent=t;
+  }
+}
+/* 目安（finishSec）との差から次回の挽き目を提案する */
+function drawAdvice(sec){
+  if(sec===null||!cur||!cur.finishSec)return '';
+  const d=sec-cur.finishSec,term=drawTerm();
+  if(Math.abs(d)<=10)return `${term}の目安 ${fmt(cur.finishSec)} とほぼ同じ。挽き目はこのままで。`;
+  const head=`${term}の目安 ${fmt(cur.finishSec)} より ${Math.abs(d)}秒${d<0?'早い':'遅い'}。`;
+  if(cur.drawdown===false)return head;
+  return head+(d<0
+    ?'落ちが速い＝挽き目が粗いかも。味が薄ければ次回は少し細かく。'
+    :'落ちが遅い＝挽き目が細かいかも。渋み・雑味が出ていたら次回は少し粗く。');
+}
 function stopTimer(){if(tInt){clearInterval(tInt);tInt=null;}tRun=false;}
 function toggleTimer(){
   if(tRun){stopTimer();document.getElementById('tPlay').textContent='再開';}
@@ -573,10 +709,27 @@ function paintPips(){
     r.querySelectorAll('.pip').forEach((p,idx)=>p.classList.toggle('on',idx<recRate[k]));});
   document.querySelectorAll('#recStars .star').forEach((s,idx)=>s.classList.toggle('on',idx<recStars));
 }
+/* ---- 落ち切り時間の手入力（タイマーで押しそびれた時用） ---- */
+function readDraw(){
+  const m=document.getElementById('recDrawM').value,s=document.getElementById('recDrawS').value;
+  if(m===''&&s==='')return null;
+  const sec=(Math.max(0,parseInt(m,10)||0))*60+(Math.max(0,parseInt(s,10)||0));
+  return sec>0?sec:null;
+}
+function paintRecDraw(){
+  const sec=readDraw();
+  document.getElementById('recDrawNote').textContent=sec===null
+    ?`タイマーで記録しそびれた時はここに入力できます（目安 ${cur.finishSec?fmt(cur.finishSec):'—'}）`
+    :drawAdvice(sec);
+}
 function toRecord(){
   stopTimer();recRate={acidity:0,sweet:0,body:0,after:0};recStars=0;
   document.getElementById('recNote').value='';
   document.getElementById('recAgain').classList.remove('on');
+  document.getElementById('recDrawTitle').textContent=`${drawTerm()}時間`;
+  document.getElementById('recDrawM').value=drawSec===null?'':Math.floor(drawSec/60);
+  document.getElementById('recDrawS').value=drawSec===null?'':drawSec%60;
+  paintRecDraw();
   buildPips();
   const names=Object.keys(pickG).map(id=>{const b=beans.find(x=>x.id===id);return b?`${b.name}(${pickG[id]||0}g)`:'';}).filter(Boolean);
   document.getElementById('recHead').textContent=`${cur.name}・豆${dose}g`+(names.length?` ／ ${names.join(' + ')}`:'');
@@ -587,7 +740,8 @@ function saveBrew(){
     return{id,name:b?b.name:'(削除済)',g:+pickG[id]||0,age:b?ageDays(b):null};});
   brews.unshift({
     id:'br'+Date.now(),date:new Date().toISOString(),
-    recipe:cur.name,group:cur.group,dose,beans:used,
+    recipe:cur.name,group:cur.group,recipeId:cur.id,dose,beans:used,
+    drawSec:readDraw(),targetSec:cur.finishSec||null,drawLabel:drawTerm(),
     rate:{...recRate},stars:recStars,grind:grindSet,
     again:document.getElementById('recAgain').classList.contains('on'),
     note:document.getElementById('recNote').value.trim()
@@ -609,12 +763,18 @@ function renderBeans(){
   if(!list.length){el.innerHTML=`<div class="empty"><div class="big">∅</div>${beanTabState==='fin'?'使い切った豆はまだありません':'豆を登録しましょう'}</div>`;return;}
   el.innerHTML=list.map(b=>{
     const fin=b.status==='fin';
+    const ph=b.photo&&photoURL[b.photo];
     return `<div class="item">
-      <div class="hd"><span class="t">${b.name}</span>
-        <span class="bean-st ${fin?'fin':'act'}">${fin?'使い切り':'使用中'}</span></div>
-      <div class="sub">${[b.roaster,b.origin,b.roast,b.process].filter(Boolean).join(' ・ ')}</div>
-      ${b.notes?`<div class="sub">🫧 ${b.notes}</div>`:''}
-      <div class="sub">${b.date?`焙煎 ${b.date}（${ageStr(b)}）`:'焙煎日未設定'}</div>
+      <div class="ph-row">
+        ${ph?`<img class="bthumb" src="${photoURL[b.photo]}" onclick="openLb('${photoURL[b.photo]}')">`:''}
+        <div style="flex:1;min-width:0">
+          <div class="hd"><span class="t">${b.name}</span>
+            <span class="bean-st ${fin?'fin':'act'}">${fin?'使い切り':'使用中'}</span></div>
+          <div class="sub">${[b.roaster,b.origin,b.roast,b.process].filter(Boolean).join(' ・ ')}</div>
+          ${b.notes?`<div class="sub">🫧 ${b.notes}</div>`:''}
+          <div class="sub">${b.date?`焙煎 ${b.date}（${ageStr(b)}）`:'焙煎日未設定'}</div>
+        </div>
+      </div>
       <div class="tags" style="margin-top:9px">
         <button class="btn ghost sm" onclick="editBean('${b.id}')">編集</button>
         <button class="btn ${fin?'yellow':'ghost'} sm" onclick="toggleFin('${b.id}')">${fin?'使用中に戻す':'✓ 使い切り'}</button>
@@ -622,8 +782,67 @@ function renderBeans(){
   }).join('');
 }
 function toggleFin(id){const b=beans.find(x=>x.id===id);b.status=b.status==='fin'?'act':'fin';save(KB,beans);renderBeans();}
+/* ---- 写真で登録 ---- */
+let editPhotoKey=null,pendingPhoto=null,dropExisting=false;
+function clearPending(){if(pendingPhoto){URL.revokeObjectURL(pendingPhoto.url);pendingPhoto=null;}}
+function shownPhotoURL(){
+  if(pendingPhoto)return pendingPhoto.url;
+  if(!dropExisting&&editPhotoKey&&photoURL[editPhotoKey])return photoURL[editPhotoKey];
+  return null;
+}
+function paintPhoto(){
+  const url=shownPhotoURL(),el=document.getElementById('photoField');
+  el.innerHTML=url
+    ?`<img class="pv" src="${url}" onclick="openLb('${url}')">
+      <button class="del" style="margin-top:6px" onclick="removePhoto()">写真を外す</button>`
+    :`<div class="ph-empty">写真なし<small>豆袋やBEANS LOGカードを撮っておくと、品種・精製・飲みごろは写真で見返せます</small></div>`;
+}
+function pickPhoto(kind){
+  if(!mediaDB){alert('このブラウザでは写真を保存できません（プライベートモードなどでストレージが使えない状態です）。');return;}
+  document.getElementById(kind==='cam'?'bPhotoCam':'bPhotoLib').click();
+}
+/* 豆の登録はレシピ設定からも呼ぶので、戻り先を覚えておく */
+let beanReturnTo='beans';
+function newBean(from,withPhoto){
+  beanReturnTo=from;go('beanEdit');beanForm();
+  document.getElementById('beanBack').textContent=from==='setup'?'レシピ設定':'豆一覧';
+  if(withPhoto)pickPhoto('cam');
+}
+function leaveBeanEdit(){
+  clearPending();
+  if(beanReturnTo==='setup'){go('setup');renderBeanPick();syncDose();}
+  else{go('beans');renderBeans();}
+}
+async function onPhotoPick(input){
+  const f=input.files&&input.files[0];input.value='';
+  if(!f)return;
+  const busy=document.getElementById('photoBusy');busy.style.display='block';
+  try{
+    const blob=await shrinkImage(f);
+    clearPending();
+    pendingPhoto={blob,url:URL.createObjectURL(blob)};
+    dropExisting=false;
+    paintPhoto();
+  }catch(e){alert('写真を読み込めませんでした。別の画像でお試しください。');}
+  busy.style.display='none';
+}
+function removePhoto(){
+  if(pendingPhoto)clearPending();
+  else dropExisting=true;
+  paintPhoto();
+}
+function openLb(url){
+  document.getElementById('lbImg').src=url;
+  document.getElementById('lightbox').classList.add('on');
+}
+function closeLb(){
+  document.getElementById('lightbox').classList.remove('on');
+  document.getElementById('lbImg').removeAttribute('src');
+}
+
 function beanForm(id){
   const b=id?beans.find(x=>x.id===id):null;
+  clearPending();editPhotoKey=b?b.photo||null:null;dropExisting=false;paintPhoto();
   document.getElementById('beanEditTitle').textContent=b?'豆を編集':'豆を登録';
   document.getElementById('bId').value=b?b.id:'';
   document.getElementById('bName').value=b?b.name:'';
@@ -635,19 +854,39 @@ function beanForm(id){
   document.getElementById('bNotes').value=b?b.notes||'':'';
   document.getElementById('bDelBtn').style.display=b?'block':'none';
 }
-function editBean(id){go('beanEdit');beanForm(id);}
-function saveBean(){
+function editBean(id){beanReturnTo='beans';document.getElementById('beanBack').textContent='豆一覧';go('beanEdit');beanForm(id);}
+async function saveBean(){
   const name=document.getElementById('bName').value.trim();
   if(!name){document.getElementById('bName').focus();document.getElementById('bName').style.borderColor='var(--red)';return;}
   const id=document.getElementById('bId').value;
+  let photo=editPhotoKey;
+  if(pendingPhoto){
+    const key='ph'+Date.now();
+    try{
+      await photoPut(key,pendingPhoto.blob);
+      if(editPhotoKey){await photoDel(editPhotoKey);dropPhotoURL(editPhotoKey);}
+      photoURL[key]=pendingPhoto.url;pendingPhoto=null;   // objectURLはそのまま使い回す
+      photo=key;
+    }catch(e){alert('写真だけ保存できませんでした（端末の空き容量をご確認ください）。ほかの項目は保存します。');}
+  }else if(dropExisting&&editPhotoKey){
+    await photoDel(editPhotoKey);dropPhotoURL(editPhotoKey);photo=null;
+  }
   const data={name,roaster:val('bRoaster'),origin:val('bOrigin'),roast:val('bRoast'),
-    date:val('bDate'),process:val('bProcess'),notes:val('bNotes')};
+    date:val('bDate'),process:val('bProcess'),notes:val('bNotes'),photo};
   if(id){Object.assign(beans.find(x=>x.id===id),data);}
   else{beans.unshift({id:'bn'+Date.now(),status:'act',...data});}
-  save(KB,beans);go('beans');beanTab('act');
+  save(KB,beans);
+  clearPending();editPhotoKey=null;dropExisting=false;
+  if(beanReturnTo==='setup'){go('setup');renderBeanPick();syncDose();}
+  else{go('beans');beanTab('act');}
 }
-function deleteBean(){const id=document.getElementById('bId').value;
-  if(id&&confirm('この豆を削除しますか？')){beans=beans.filter(x=>x.id!==id);save(KB,beans);go('beans');renderBeans();}}
+async function deleteBean(){const id=document.getElementById('bId').value;
+  if(id&&confirm('この豆を削除しますか？')){
+    const b=beans.find(x=>x.id===id);
+    if(b&&b.photo){await photoDel(b.photo);dropPhotoURL(b.photo);}
+    beans=beans.filter(x=>x.id!==id);delete pickG[id];save(KB,beans);
+    clearPending();editPhotoKey=null;dropExisting=false;
+    leaveBeanEdit();}}
 function val(id){return document.getElementById(id).value.trim();}
 
 /* ===================== HISTORY ===================== */
@@ -661,10 +900,16 @@ function renderBrews(){
     const rt=Object.keys(LBL).map(k=>b.rate&&b.rate[k]?`<span class="tag">${LBL[k]}${b.rate[k]}</span>`:'').join('');
     const stars=b.stars?`<span class="tag y">${'★'.repeat(b.stars)}</span>`:(b.score!=null?`<span class="tag y">総合 ${(+b.score).toFixed(1)}</span>`:'');
     const grindTag=(b.grind!=null)?`<span class="tag">挽 ${(+b.grind).toFixed(1)}</span>`:'';
+    let drawTag='';
+    if(b.drawSec!=null){
+      const d=b.targetSec?b.drawSec-b.targetSec:null;
+      const diff=d===null||d===0?'':`（目安${d>0?'+':'−'}${Math.abs(d)}s）`;
+      drawTag=`<span class="tag y">${b.drawLabel||'落ち切り'} ${fmt(b.drawSec)}${diff}</span>`;
+    }
     return `<div class="item">
       <div class="hd"><span class="t">${b.recipe}</span><span class="d">${ds}</span></div>
       <div class="sub">${beanTxt}</div>
-      <div class="tags">${stars}${grindTag}${rt} ${b.again?'<span class="flag">また淹れたい</span>':''}</div>
+      <div class="tags">${stars}${drawTag}${grindTag}${rt} ${b.again?'<span class="flag">また淹れたい</span>':''}</div>
       ${b.note?`<div class="sub" style="margin-top:7px">“${b.note}”</div>`:''}
       <div style="margin-top:8px"><button class="del" onclick="delBrew('${b.id}')">削除</button></div>
     </div>`;
@@ -677,6 +922,14 @@ function fmt(s){return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
 
 /* ===================== INIT ===================== */
 renderRecipes();
+document.getElementById('recDrawM').addEventListener('input',paintRecDraw);
+document.getElementById('recDrawS').addEventListener('input',paintRecDraw);
+(async function(){
+  mediaDB=await idbOpen();
+  await hydratePhotos();
+  if(document.getElementById('beans').classList.contains('on'))renderBeans();
+  if(document.getElementById('setup').classList.contains('on'))renderBeanPick();
+})();
 </script>
 </body>
 </html>
