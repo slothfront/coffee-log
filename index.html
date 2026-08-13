@@ -228,12 +228,13 @@ textarea.in{resize:vertical;min-height:54px}
 
   <div class="box">
     <h3>豆量</h3>
-    <div class="dose">
+    <div class="seg" id="doseFixed" style="display:none"></div>
+    <div class="dose" id="doseStep">
       <button onclick="bump(-1)">–</button>
       <div class="val"><span id="doseSrc"></span><b id="doseVal">20</b><span>g</span></div>
       <button onclick="bump(1)">+</button>
     </div>
-    <div class="muted">豆を選ぶと合計量が自動で入ります。ブレンドは複数選択できます。</div>
+    <div class="muted" id="doseHint">豆を選ぶと合計量が自動で入ります。ブレンドは複数選択できます。</div>
   </div>
 
   <div class="box">
@@ -521,7 +522,54 @@ const RECIPES=[
    {atSec:40,pour:130,cum:180,tip:'本注ぎ開始。中心に小さな円で一定方向。マッシュルームをドリッパー2/3の高さでキープ（毎秒1〜2ml）'},
    {atSec:120,pour:120,cum:300,tip:'同じ速度で300mlまで。水面を上下させない'}],
   finishSec:170,finishTip:'目的の量で外す。フィルターの残り湯は全部落とし切らない方が美味しい',
-  extra:'比率の目安＝15:1（豆20g）〜10:1（豆30g）。焙煎1週間以上前の豆は蒸らしを最長60秒まで。'}
+  extra:'比率の目安＝15:1（豆20g）〜10:1（豆30g）。焙煎1週間以上前の豆は蒸らしを最長60秒まで。'},
+
+ /* --- エスプレッソ系：豆量はバスケットの2択（doses）／steps は1杯ぶんを cups 倍でスケール --- */
+ {id:'ec_ame',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アメリカーノ',type:'hot',method:'EC885J エスプレッソ＋湯',
+  base:9,doses:[{g:9,cups:1,label:'1杯 ☕'},{g:15,cups:2,label:'2杯 ☕☕'}],
+  grind:'エスプレッソ用（極細）',temp:'湯92℃',water:75,wLabel:'湯',ice:0,shotSec:28,
+  prep:[
+   '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
+   'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ そのお湯をマグに移してマグも温める。ホルダーの水気を拭く',
+   'フィルターに粉 → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
+   'マグの湯を捨て、湯（92℃）を先に注いでおく＝クレマが層で残るロングブラック式'],
+  steps:[
+   {atSec:0,pour:75,cum:75,blm:true,tip:'湯はマグに用意済み。ホルダーを装着して抽出ボタンを押す＝ここから計測'},
+   {atSec:25,pour:25,cum:100,tip:'25〜30秒で出れば適正。出たら湯の入ったマグへ静かに注ぐ'}],
+  finishSec:28,finishTip:'25〜30秒で自動停止すれば適正。⏱で抽出時間を記録',
+  extra:'濃さ＝1:2（湯50g・濃いめ）／1:3（湯75g・標準）／1:4（湯100g・軽め）。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。重さで揃えたいときは定量設定で校正する。ぬるいときは湯煎を長めに／抽出温度を「高」へ。'},
+
+ {id:'ec_latte',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'カフェラテ',type:'hot',method:'EC885J エスプレッソ＋スチームミルク',
+  base:15,doses:[{g:15,cups:2,label:'2杯 ☕☕'},{g:9,cups:1,label:'1杯 ☕'}],
+  grind:'エスプレッソ用（極細）',temp:'牛乳60〜65℃',water:125,wLabel:'牛乳',ice:0,shotSec:28,
+  prep:[
+   '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
+   'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ そのお湯をマグに分けてマグも温める。ホルダーの水気を拭く',
+   'フィルターに粉 → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
+   'ピッチャーに冷たい牛乳を計り入れる（ピッチャーの1/3〜1/2まで）。成分無調整・冷蔵庫から出したてが泡が安定する'],
+  steps:[
+   {atSec:0,pour:25,cum:25,blm:true,tip:'ホルダーを装着して抽出ボタンを押す＝ここから計測'},
+   {atSec:28,pour:0,cum:25,tip:'自動停止したら⏱で抽出時間を記録 → そのまま「再開」を押してスチームへ'},
+   {atSec:40,pour:0,cum:25,tip:'♨️でスチーム予熱。予熱中に一度つまみを開いてノズルの水抜き（そのまま入れると牛乳が薄まる）'},
+   {atSec:60,pour:125,cum:150,tip:'空気を入れる5〜10秒（チチチ・〜37℃）→ 深く沈めて渦。側面が3秒持てない＝60〜65℃で止める'},
+   {atSec:105,pour:0,cum:150,tip:'つまみを閉じてノズルを抜く → 拭いて空吹かし。台に打って大きい泡を割り、回して艶を出す'}],
+  finishSec:135,finishTip:'エスプレッソの上にミルクを静かに注ぐ（30秒以内に）',
+  extra:'濃さ＝1:4（牛乳100g・濃いめ）／1:5（125g・標準）／1:6（150g・マグ寄り）。ラテの泡は5mm前後（カプチーノの1〜2cmより薄い）。70℃を超えない（甘みが飛ぶ）。泡が粗いときは空気を入れる時間を3〜5秒に短くして渦を長く。ピッチャーが無ければフレンチプレスで代用（60〜65℃の牛乳をプランジャー20〜30回）。フロッサーは60秒以上続けない。'},
+
+ {id:'ml_olait',drawdown:true,group:'ミルク ／ ドリップ',name:'カフェオレ',type:'hot',method:'HARIO V60 02',
+  base:30,grind:'中挽き',temp:'92℃',water:300,ice:0,milkEq:true,
+  prep:[
+   'マグを湯で温めておく（牛乳を冷やさないため。厚手のマグほど効く）',
+   '牛乳を60〜65℃に温める。沸騰させない',
+   '温めた牛乳を、湯を捨てたマグへ先に入れておく'],
+  steps:[
+   {atSec:0,pour:60,cum:60,blm:true,tip:'蒸らし兼1投目。粉が多く層が深いのでV60は02サイズ'},
+   {atSec:45,pour:60,cum:120,tip:'前半完了＝ここで味が決まる'},
+   {atSec:90,pour:60,cum:180,tip:'後半（濃度）スタート'},
+   {atSec:130,pour:60,cum:240},
+   {atSec:160,pour:60,cum:300,tip:'注ぎきり'}],
+  finishSec:240,finishTip:'4:00前後、落ちきる寸前にドリッパーを外す',
+  extra:'湯は豆×10（通常の1.5倍濃度）＝牛乳に負けない濃さを作るのが肝。抽出液と同量の牛乳（1:1）を合わせる。牛乳の上からコーヒーを静かに注いで軽くひと混ぜ。薄ければ湯を1:9へ・挽き目を一段細かく／重ければ1:11へ・前半を50g＋70gで甘め寄せ。'}
 ];
 
 /* ===================== STORE ===================== */
@@ -603,7 +651,8 @@ function renderRecipes(){
   const wrap=document.getElementById('recipeList');let html='',lastG='';
   RECIPES.forEach(r=>{
     if(r.group!==lastG){html+=`<div class="group-lbl">${r.group}</div>`;lastG=r.group;}
-    const meta=`${r.method} ・ 豆${r.base}g ・ ${r.type==='ice'?'アイス':'ホット'}`;
+    const doseTxt=r.doses?r.doses.map(d=>d.g).sort((a,b)=>a-b).join('／'):r.base;
+    const meta=`${r.method} ・ 豆${doseTxt}g ・ ${r.type==='ice'?'アイス':'ホット'}`;
     html+=`<div class="card ${r.type}" onclick="openSetup('${r.id}')">
       <div class="dot">${r.type==='ice'?'IC':'HT'}</div>
       <div><div class="nm">${r.name}</div><div class="meta">${meta}</div></div>
@@ -613,12 +662,31 @@ function renderRecipes(){
 }
 
 /* ===================== SETUP ===================== */
-let cur=null,dose=20,pickG={},grindSet=5.0; // pickG: beanId -> grams
+let cur=null,dose=20,pickG={},grindSet=5.0,doseIdx=0; // pickG: beanId -> grams
+/* 豆量に対する倍率。エスプレッソ系はバスケットが2択なので「杯数」で倍率を決める（9g→15gは1.67倍ではない） */
+function facF(){return cur.doses?cur.doses[doseIdx].cups:dose/cur.base;}
+function pickDose(i){doseIdx=i;dose=cur.doses[i].g;renderDoseFixed();renderBeanPick();renderScaled();}
+function renderDoseFixed(){
+  const el=document.getElementById('doseFixed');
+  el.innerHTML=cur.doses.map((d,i)=>
+    `<button class="${i===doseIdx?'on':''}" onclick="pickDose(${i})">${d.label}　豆${d.g}g</button>`).join('');
+  document.getElementById('doseVal').textContent=dose;
+}
 function openSetup(id){
-  cur=RECIPES.find(r=>r.id===id);dose=cur.base;pickG={};
+  cur=RECIPES.find(r=>r.id===id);pickG={};
+  const fixed=!!cur.doses;
+  doseIdx=0;dose=fixed?cur.doses[0].g:cur.base;
+  document.getElementById('doseFixed').style.display=fixed?'flex':'none';
+  document.getElementById('doseStep').style.display=fixed?'none':'flex';
+  document.getElementById('doseHint').textContent=fixed
+    ?'エスプレッソはバスケットが1杯用・2杯用の2択なので、この2つだけです。'
+    :'豆を選ぶと合計量が自動で入ります。ブレンドは複数選択できます。';
+  if(fixed)renderDoseFixed();
   document.getElementById('setupGroup').textContent=cur.group;
   document.getElementById('setupName').textContent=cur.name;
-  document.getElementById('setupBase').textContent=`基準 豆${cur.base}g／湯${cur.water}g`+(cur.ice?`／氷${cur.ice}g`:'')+`・${cur.grind}・${cur.temp}`;
+  const wl=cur.wLabel||'湯';
+  document.getElementById('setupBase').textContent=
+    `基準 豆${fixed?cur.doses[0].g:cur.base}g／${wl}${cur.water}g`+(fixed?'（1杯ぶん）':'')+(cur.ice?`／氷${cur.ice}g`:'')+`・${cur.grind}・${cur.temp}`;
   grindSet=5.0;
   const gs=document.getElementById('grindSlider');gs.value=5.0;document.getElementById('grindVal').textContent='5.0';
   gs.oninput=()=>{grindSet=parseFloat(gs.value);document.getElementById('grindVal').textContent=grindSet.toFixed(1);};
@@ -627,6 +695,8 @@ function openSetup(id){
 }
 function bump(d){dose=Math.max(5,dose+d);document.getElementById('doseVal').textContent=dose;document.getElementById('doseSrc').textContent='';renderScaled();}
 function syncDose(){
+  /* 豆量が2択のレシピは、豆を選んでも豆量を動かさない（バスケットに入る量は決まっているため） */
+  if(cur&&cur.doses){renderScaled();return;}
   const sum=Object.values(pickG).reduce((a,b)=>a+(+b||0),0);
   if(sum>0){dose=sum;document.getElementById('doseSrc').textContent='';}
   document.getElementById('doseVal').textContent=dose;
@@ -655,9 +725,9 @@ function toggleBean(id){
 }
 function setBeanG(id,v){pickG[id]=Math.max(0,+v||0);syncDose();renderBeanPick();}
 
-function scale(){const f=dose/cur.base;return cur.steps.map(s=>({...s,pourS:Math.round(s.pour*f),cumS:Math.round(s.cum*f)}));}
+function scale(){const f=facF();return cur.steps.map(s=>({...s,pourS:Math.round(s.pour*f),cumS:Math.round(s.cum*f)}));}
 function renderScaled(){
-  const rows=scale();const f=dose/cur.base;
+  const rows=scale();const f=facF(),esp=!!cur.shotSec;
   let body=rows.map((s,i)=>`<tr class="${s.blm?'blm':''}">
     <td class="num">${i+1}</td>
     <td>${fmt(s.atSec)}</td>
@@ -665,12 +735,18 @@ function renderScaled(){
     <td>${s.cumS}g</td>
     <td class="tip">${s.tip||''}</td></tr>`).join('');
   const iceR=cur.ice?`<tr><td class="num">氷</td><td>—</td><td>${Math.round(cur.ice*f)}g</td><td>—</td><td class="tip">急冷用</td></tr>`:'';
+  /* カフェオレ：牛乳＝抽出液と同量。抽出液は「湯 − 豆が吸う分（自重の約2倍）」で見積もる */
+  const milkG=cur.milkEq?Math.max(0,Math.round(cur.water*f-dose*2)):0;
+  const milkR=milkG?`<tr><td class="num">乳</td><td>—</td><td>${milkG}g</td><td>—</td><td class="tip">60〜65℃に温めてマグへ先に入れる（抽出液と1:1）</td></tr>`:'';
+  let prep=cur.prep?`<div class="note"><b>準備</b>（タイマー前）<br>${cur.prep.map((p,i)=>`${i+1}. ${p}`).join('<br>')}</div>`:'';
   let extra=cur.extra?`<div class="note">${cur.extra}</div>`:'';
   let iceNote=cur.type==='ice'?`<div class="note">アイスは湯量・氷量も豆量に比例スケールしています。出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
+  let espNote=esp?`<div class="note">タイマーは<b>抽出だけ</b>を計ります（準備は上のリスト）。目安は <b>25〜30秒</b>。2杯のときは表の数字も2杯ぶんの合計です。</div>`:'';
   document.getElementById('scaledTable').innerHTML=
-    `<div class="eyebrow" style="margin-top:14px">RECIPE ／ 豆${dose}g</div>
-     <table class="rtable"><thead><tr><th>#</th><th>経過</th><th>注湯</th><th>累計</th><th>ポイント</th></tr></thead>
-     <tbody>${body}${iceR}</tbody></table>${extra}${iceNote}`;
+    `<div class="eyebrow" style="margin-top:14px">RECIPE ／ 豆${dose}g${cur.doses?`・${cur.doses[doseIdx].label}`:''}</div>
+     ${prep}
+     <table class="rtable"><thead><tr><th>#</th><th>経過</th><th>${esp?'量':'注湯'}</th><th>累計</th><th>ポイント</th></tr></thead>
+     <tbody>${body}${milkR}${iceR}</tbody></table>${extra}${espNote}${iceNote}`;
 }
 
 /* ===================== TIMER ===================== */
@@ -740,8 +816,10 @@ document.addEventListener('visibilitychange',()=>{
   if(tRun){keepAwake(true);tick();}     // 復帰時は実時刻から即座に追いつく
 });
 
-/* ---- 落ち切り（ドリップ以外は「抽出完了」） ---- */
-function drawTerm(){return cur&&cur.drawdown===false?'抽出完了':'落ち切り';}
+/* ---- 落ち切り（エスプレッソは「抽出時間」／その他のドリップ以外は「抽出完了」） ---- */
+function drawTerm(){return cur&&cur.shotSec?'抽出時間':(cur&&cur.drawdown===false?'抽出完了':'落ち切り');}
+/* 目安の秒。エスプレッソは25〜30秒のショット時間そのもの（finishSecは画面の総尺なので別） */
+function targetSec(){return cur?(cur.shotSec||cur.finishSec||null):null;}
 function stampDraw(){
   if(drawSec===null){drawSec=tSec;stopTimer();document.getElementById('tPlay').textContent='再開';}
   else{drawSec=null;}
@@ -756,12 +834,20 @@ function paintDraw(){
     note.style.display=t?'block':'none';note.textContent=t;
   }
 }
-/* 目安（finishSec）との差から次回の挽き目を提案する */
+/* 目安との差から次回の挽き目を提案する */
 function drawAdvice(sec){
-  if(sec===null||!cur||!cur.finishSec)return '';
-  const d=sec-cur.finishSec,term=drawTerm();
-  if(Math.abs(d)<=10)return `${term}の目安 ${fmt(cur.finishSec)} とほぼ同じ。挽き目はこのままで。`;
-  const head=`${term}の目安 ${fmt(cur.finishSec)} より ${Math.abs(d)}秒${d<0?'早い':'遅い'}。`;
+  const tg=targetSec();
+  if(sec===null||!cur||!tg)return '';
+  const term=drawTerm(),d=sec-tg;
+  /* エスプレッソは25〜30秒に入っているかで見る（挽き目が一番効くのがここ） */
+  if(cur.shotSec){
+    if(sec>=25&&sec<=30)return `${sec}秒＝適正レンジ（25〜30秒）。挽き目はこのままで。`;
+    return sec<25
+      ?`${sec}秒＝速すぎ（目安25〜30秒）。挽き目が粗いか粉が少なめ。次回は少し細かく。`
+      :`${sec}秒＝遅すぎ（目安25〜30秒）。挽き目が細かいか詰めすぎ。次回は少し粗く、タンピングも軽めに。`;
+  }
+  if(Math.abs(d)<=10)return `${term}の目安 ${fmt(tg)} とほぼ同じ。挽き目はこのままで。`;
+  const head=`${term}の目安 ${fmt(tg)} より ${Math.abs(d)}秒${d<0?'早い':'遅い'}。`;
   if(cur.drawdown===false)return head;
   return head+(d<0
     ?'落ちが速い＝挽き目が粗いかも。味が薄ければ次回は少し細かく。'
@@ -793,9 +879,10 @@ function updTimer(){
   const cumNow=i>=0?steps[i].cumS:0;
   document.getElementById('tCum').textContent=cumNow;
   const nowEl=document.getElementById('tNow'),nextEl=document.getElementById('tNext');
-  if(i<0){nowEl.innerHTML='まもなく1投目<small>0:00で蒸らしスタート</small>';}
+  const esp=!!cur.shotSec;
+  if(i<0){nowEl.innerHTML=esp?'まもなく抽出<small>0:00で抽出ボタン</small>':'まもなく1投目<small>0:00で蒸らしスタート</small>';}
   else{const s=steps[i];
-    if(s.pourS>0)nowEl.innerHTML=`${i+1}投目 ${s.pourS}g 注ぐ（累計${s.cumS}g）<small>${s.tip||''}</small>`;
+    if(s.pourS>0)nowEl.innerHTML=(esp?`${s.pourS}g（累計${s.cumS}g）`:`${i+1}投目 ${s.pourS}g 注ぐ（累計${s.cumS}g）`)+`<small>${s.tip||''}</small>`;
     else nowEl.innerHTML=`${s.tip||'抽出中'}<small>累計${s.cumS}g</small>`;
   }
   const nx=steps.find(s=>s.atSec>tSec);
@@ -837,7 +924,7 @@ function readDraw(){
 function paintRecDraw(){
   const sec=readDraw();
   document.getElementById('recDrawNote').textContent=sec===null
-    ?`タイマーで記録しそびれた時はここに入力できます（目安 ${cur.finishSec?fmt(cur.finishSec):'—'}）`
+    ?`タイマーで記録しそびれた時はここに入力できます（目安 ${targetSec()?(cur.shotSec?'25〜30秒':fmt(targetSec())):'—'}）`
     :drawAdvice(sec);
 }
 function toRecord(){
@@ -859,7 +946,7 @@ function saveBrew(){
   brews.unshift({
     id:'br'+Date.now(),date:new Date().toISOString(),
     recipe:cur.name,group:cur.group,recipeId:cur.id,dose,beans:used,
-    drawSec:readDraw(),targetSec:cur.finishSec||null,drawLabel:drawTerm(),
+    drawSec:readDraw(),targetSec:targetSec(),drawLabel:drawTerm(),
     rate:{...recRate},stars:recStars,grind:grindSet,
     again:document.getElementById('recAgain').classList.contains('on'),
     note:document.getElementById('recNote').value.trim()
@@ -1144,9 +1231,10 @@ function histTab(t){
 }
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
 /* 挽き目（横）×落ち切り（縦）を★で色分けした散布図。狙いの設定が目で分かるように */
-function scatter(list,target){
+function scatter(list,target,label){
+  label=label||'落ち切り';
   const pts=list.filter(b=>b.drawSec!=null&&b.grind!=null);
-  if(pts.length<2)return'<div class="lgd">落ち切りと挽き目がそろった記録が2回分たまると、ここに散布図が出ます。</div>';
+  if(pts.length<2)return`<div class="lgd">${label}と挽き目がそろった記録が2回分たまると、ここに散布図が出ます。</div>`;
   const W=320,H=150,L=34,R=10,T=12,B=26;
   const ys=pts.map(p=>p.drawSec).concat(target?[target]:[]);
   let y0=Math.min(...ys),y1=Math.max(...ys);
@@ -1167,7 +1255,7 @@ function scatter(list,target){
     <text x="${L}" y="${H-8}" font-size="10" fill="#16140f">挽き目 1（細）</text>
     <text x="${W-R}" y="${H-8}" font-size="10" text-anchor="end" fill="#16140f">10（粗）</text>
   </svg>
-  <div class="lgd">縦＝落ち切り時間／横＝挽き目。<span style="color:#e2342b;font-weight:800">●</span> ★4以上　<span style="color:#1f50a0;font-weight:800">●</span> ★3　<span style="color:#8a8578;font-weight:800">●</span> ★2以下</div>`;
+  <div class="lgd">縦＝${label}／横＝挽き目。<span style="color:#e2342b;font-weight:800">●</span> ★4以上　<span style="color:#1f50a0;font-weight:800">●</span> ★3　<span style="color:#8a8578;font-weight:800">●</span> ★2以下</div>`;
 }
 function renderStats(){
   const el=document.getElementById('statView');
@@ -1197,7 +1285,7 @@ function renderStats(){
         <span>挽き目平均 <b>${gAvg!=null?gAvg.toFixed(1):'—'}</b></span>
       </div>
       <div class="best">${bestTxt}</div>
-      ${scatter(list,target)}
+      ${scatter(list,target,label)}
     </div>`;
   }).join('');
 }
