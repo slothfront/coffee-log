@@ -423,7 +423,7 @@ textarea.in{resize:vertical;min-height:54px}
 </nav>
 
 <script>
-/* ===================== DATA: 8 RECIPES ===================== */
+/* ===================== DATA: 14 RECIPES ===================== */
 /* steps: atSec=注ぐ秒, pour=その投の注湯g(基準), cum=累計g(基準), tip=メモ, blm=蒸らし */
 const RECIPES=[
  {id:'hg_v60_h',drawdown:true,group:'萩原 ／ THE COFFEESHOP',name:'V60 ホット',type:'hot',method:'HARIO V60',
@@ -538,6 +538,20 @@ const RECIPES=[
    {atSec:25,pour:25,cum:100,tip:'25〜30秒で出れば適正。出たら湯の入ったマグへ静かに注ぐ'}],
   finishSec:28,finishTip:'25〜30秒で自動停止すれば適正。⏱で抽出時間を記録',
   extra:'濃さ＝1:2（湯50g・濃いめ）／1:3（湯75g・標準）／1:4（湯100g・軽め）。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。重さで揃えたいときは定量設定で校正する。ぬるいときは湯煎を長めに／抽出温度を「高」へ。'},
+
+ {id:'ec_ame_i',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アイスアメリカーノ',type:'ice',method:'EC885J エスプレッソ＋氷・冷水',
+  base:9,doses:[{g:9,cups:1,label:'1杯 ☕'},{g:15,cups:2,label:'2杯 ☕☕'}],
+  grind:'エスプレッソ用（極細）',temp:'冷水（冷蔵）',water:50,wLabel:'冷水',ice:130,shotSec:28,
+  prep:[
+   '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
+   'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。※アイスでもマシン側の湯煎はする（抽出温度が落ちると酸味だけが立つ）。グラスは温めない',
+   'フィルターに粉 → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
+   'グラスに氷 → 冷水の順で先に入れておく。氷は多めに（少ないと溶けて薄まる）'],
+  steps:[
+   {atSec:0,pour:50,cum:50,blm:true,tip:'氷と冷水はグラスに用意済み。ホルダーを装着して抽出ボタンを押す＝ここから計測'},
+   {atSec:25,pour:25,cum:75,tip:'25〜30秒で出れば適正。氷のグラスへ静かに注ぎ、すぐひと混ぜして急冷する'}],
+  finishSec:28,finishTip:'25〜30秒で自動停止すれば適正。⏱で抽出時間を記録',
+  extra:'濃さ＝1:1.5（冷水37g・濃いめ）／1:2（50g・標準）／1:3（75g・軽め＝ホットと同じ比率）。氷の溶け分が加水になるので、ホットの1:3より水は少なめから始める。エスプレッソは氷に直接当てず、グラスの縁から静かに落とすとクレマの層が残る。2杯（☕☕）は氷・冷水も2杯ぶんの合計なので、グラス2つに半分ずつ分ける。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。'},
 
  {id:'ec_latte',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'カフェラテ',type:'hot',method:'EC885J エスプレッソ＋スチームミルク',
   base:15,doses:[{g:15,cups:2,label:'2杯 ☕☕'},{g:9,cups:1,label:'1杯 ☕'}],
@@ -740,7 +754,7 @@ function renderScaled(){
   const milkR=milkG?`<tr><td class="num">乳</td><td>—</td><td>${milkG}g</td><td>—</td><td class="tip">60〜65℃に温めてマグへ先に入れる（抽出液と1:1）</td></tr>`:'';
   let prep=cur.prep?`<div class="note"><b>準備</b>（タイマー前）<br>${cur.prep.map((p,i)=>`${i+1}. ${p}`).join('<br>')}</div>`:'';
   let extra=cur.extra?`<div class="note">${cur.extra}</div>`:'';
-  let iceNote=cur.type==='ice'?`<div class="note">アイスは湯量・氷量も豆量に比例スケールしています。出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
+  let iceNote=cur.type==='ice'?`<div class="note">${esp?'アイスは氷・冷水も杯数ぶんスケールしています。氷の溶け分が加水になるので、水はホットより少なめから。':'アイスは湯量・氷量も豆量に比例スケールしています。'}出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
   let espNote=esp?`<div class="note">タイマーは<b>抽出だけ</b>を計ります（準備は上のリスト）。目安は <b>25〜30秒</b>。2杯のときは表の数字も2杯ぶんの合計です。</div>`:'';
   document.getElementById('scaledTable').innerHTML=
     `<div class="eyebrow" style="margin-top:14px">RECIPE ／ 豆${dose}g${cur.doses?`・${cur.doses[doseIdx].label}`:''}</div>
