@@ -149,6 +149,7 @@ textarea.in{resize:vertical;min-height:54px}
 /* ---- drink window ---- */
 .drink{display:inline-block;margin-top:7px;border:2px solid var(--ink);padding:2px 7px;font-weight:800;font-size:11px}
 .drink.now{background:var(--yellow)}
+.drink.soon{background:var(--blue);color:#fff}
 .drink.early{background:#fff;opacity:.7}
 .drink.over{background:var(--red);color:#fff}
 
@@ -435,7 +436,7 @@ const RECIPES=[
    {atSec:80,pour:60,cum:180},
    {atSec:100,pour:60,cum:240},
    {atSec:120,pour:60,cum:300}],
-  finishSec:150,finishTip:'2:30〜2:45で落ちきり。寸前にドリッパーを外す'},
+  finishSec:150,finishRange:[150,165],finishTip:'2:30〜2:45で落ちきり。寸前にドリッパーを外す'},
 
  {id:'hg_v60_i',drawdown:true,group:'萩原 ／ THE COFFEESHOP',name:'V60 アイス',type:'ice',method:'HARIO V60',
   base:27,grind:'中細〜中挽き',temp:'94℃',water:200,ice:130,
@@ -445,7 +446,7 @@ const RECIPES=[
    {atSec:65,pour:40,cum:120},
    {atSec:85,pour:40,cum:160},
    {atSec:105,pour:40,cum:200}],
-  finishSec:125,finishTip:'2:05〜2:20で落ちきり → すぐかき混ぜて急冷'},
+  finishSec:125,finishRange:[125,140],finishTip:'2:05〜2:20で落ちきり → すぐかき混ぜて急冷'},
 
  {id:'hg_aero_h',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス ホット',type:'hot',method:'エアロプレス（インバート）',
   base:20,grind:'中挽き(紙)／中粗(金属)',temp:'—',water:290,ice:0,
@@ -454,7 +455,7 @@ const RECIPES=[
    {atSec:30,pour:100,cum:200,tip:'合計200gに → フィルター蓋を装着（開始1分以内）'},
    {atSec:60,pour:0,cum:200,tip:'逆さにしてカップへ。30秒かけて一定速度でプレス'},
    {atSec:90,pour:90,cum:290,tip:'90g注ぎ足して濃度調整'}],
-  finishSec:90,finishTip:'最後に90g注ぎ足して好みの濃度に'},
+  finishSec:90,finishRange:[85,95],finishTip:'最後に90g注ぎ足して好みの濃度に'},
 
  {id:'hg_aero_i',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'エアロプレス アイス',type:'ice',method:'エアロプレス（インバート）',
   base:24,grind:'中細〜中挽き',temp:'94℃',water:190,ice:130,
@@ -462,7 +463,7 @@ const RECIPES=[
    {atSec:0,pour:100,cum:100,blm:true,tip:'氷のサーバーを用意。100g注ぎパドル10回'},
    {atSec:30,pour:90,cum:190,tip:'残り90gを追加し計190g、フィルターをセット'},
    {atSec:60,pour:0,cum:190,tip:'逆さにして30秒かけてプレス → すぐ急冷'}],
-  finishSec:60,finishTip:'プレス後すぐに急冷'},
+  finishSec:60,finishRange:[55,65],finishTip:'プレス後すぐに急冷'},
 
  {id:'hg_fp_h',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス ホット',type:'hot',method:'フレンチプレス',
   base:18,grind:'粗挽き',temp:'—',water:300,ice:0,
@@ -470,7 +471,7 @@ const RECIPES=[
    {atSec:0,pour:150,cum:150,blm:true,tip:'150gまで回し注ぎ、30秒蒸らし'},
    {atSec:30,pour:150,cum:300,tip:'残りを足し計300g → プランジャーを上げた状態で蓋'},
    {atSec:240,pour:0,cum:300,tip:'4分でゆっくり押し下げ → 静かに注ぐ'}],
-  finishSec:240,finishTip:'4分でプランジャーを押し下げる'},
+  finishSec:240,finishRange:[235,255],finishTip:'4分でプランジャーを押し下げる'},
 
  {id:'hg_fp_i',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス アイス',type:'ice',method:'フレンチプレス',
   base:24,grind:'粗挽き',temp:'94℃',water:200,ice:130,
@@ -478,7 +479,7 @@ const RECIPES=[
    {atSec:0,pour:100,cum:100,blm:true,tip:'100gで30秒蒸らし'},
    {atSec:30,pour:100,cum:200,tip:'残りを注ぐ → プランジャーをセット'},
    {atSec:240,pour:0,cum:200,tip:'4分で押し下げ → 氷のサーバーに注いで急冷'}],
-  finishSec:240,finishTip:'4分でプランジャーを押し下げる'},
+  finishSec:240,finishRange:[235,255],finishTip:'4分でプランジャーを押し下げる'},
 
  {id:'ks_46',drawdown:true,group:'粕谷 ／ 4:6メソッド',name:'4:6 ベーシック',type:'hot',method:'HARIO V60',
   base:20,grind:'粗挽き',temp:'浅93／中88／深83℃',water:300,ice:0,
@@ -488,7 +489,7 @@ const RECIPES=[
    {atSec:90,pour:60,cum:180,tip:'後半（濃度調整）スタート'},
    {atSec:130,pour:60,cum:240},
    {atSec:160,pour:60,cum:300,tip:'注ぎきり'}],
-  finishSec:210,finishTip:'3:30でドリッパーを外す',
+  finishSec:210,finishRange:[195,225],finishTip:'3:15〜3:45で落ちきり（3:30でドリッパーを外す）',
   extra:'味＝前半120gの配分で：甘め(1投目<2投目)／明るい(1投目>2投目)。濃度＝後半の投数。'},
 
  {id:'ks_10',drawdown:true,group:'粕谷 ／ 10投式',name:'10投式 新レシピ',type:'hot',method:'HARIO V60 NEO',
@@ -504,7 +505,7 @@ const RECIPES=[
    {atSec:120,pour:30,cum:240,tip:'この辺りからお湯の抜けが遅くなる'},
    {atSec:135,pour:30,cum:270},
    {atSec:150,pour:30,cum:300,tip:'注ぎきり'}],
-  finishSec:210,finishTip:'約3:30で全量が落ちきったら完成'},
+  finishSec:210,finishRange:[195,225],finishTip:'3:15〜3:45で全量が落ちきったら完成'},
 
  {id:'bb_fp',drawdown:false,group:'ブルーボトル',name:'フレンチプレス',type:'hot',method:'フレンチプレス',
   base:28,grind:'粗挽き（ビーチの砂くらい）',temp:'92℃',water:355,ice:0,
@@ -512,7 +513,7 @@ const RECIPES=[
    {atSec:0,pour:355,cum:355,blm:true,tip:'容器を予熱→豆に355gをゆっくり注ぐ。箸でやさしく混ぜ、金網を表面の1.3cm上にセット'},
    {atSec:180,pour:0,cum:355,tip:'金網を一度取る。コク重視→軽く混ぜる／すっきり→浮いた粉だけ除く'},
    {atSec:195,pour:0,cum:355,tip:'15〜20秒かけて底まで押し下げる（抵抗ゼロ=粗すぎ／重い=細かすぎ）'}],
-  finishSec:200,finishTip:'押し下げたら放置せずすぐカップへ（過抽出防止）',
+  finishSec:200,finishRange:[195,215],finishTip:'押し下げたら放置せずすぐカップへ（過抽出防止）',
   extra:'比率の目安＝あっさり15:1（豆20g）／基本12:1（豆28g）／濃いめ10:1（豆35g）。ミルク・砂糖・深煎りなら豆を増やす。'},
 
  {id:'bb_po',drawdown:true,group:'ブルーボトル',name:'ポアオーバー',type:'hot',method:'ポアオーバー（ドリッパー）',
@@ -521,13 +522,13 @@ const RECIPES=[
    {atSec:0,pour:50,cum:50,blm:true,tip:'中心に25mm（25¢硬貨）大の円で少量。1滴も落とさず豆全体を均一に湿らせる。30〜40秒蒸らし'},
    {atSec:40,pour:130,cum:180,tip:'本注ぎ開始。中心に小さな円で一定方向。マッシュルームをドリッパー2/3の高さでキープ（毎秒1〜2ml）'},
    {atSec:120,pour:120,cum:300,tip:'同じ速度で300mlまで。水面を上下させない'}],
-  finishSec:170,finishTip:'目的の量で外す。フィルターの残り湯は全部落とし切らない方が美味しい',
+  finishSec:170,finishRange:[160,190],finishTip:'2:40〜3:10。目的の量で外す。フィルターの残り湯は全部落とし切らない方が美味しい',
   extra:'比率の目安＝15:1（豆20g）〜10:1（豆30g）。焙煎1週間以上前の豆は蒸らしを最長60秒まで。'},
 
  /* --- エスプレッソ系：豆量はバスケットの2択（doses）／steps は1杯ぶんを cups 倍でスケール --- */
  {id:'ec_ame',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アメリカーノ',type:'hot',method:'EC885J エスプレッソ＋湯',
   base:9,doses:[{g:9,cups:1,label:'1杯 ☕'},{g:15,cups:2,label:'2杯 ☕☕'}],
-  grind:'エスプレッソ用（極細）',temp:'湯92℃',water:75,wLabel:'湯',ice:0,shotSec:28,
+  grind:'エスプレッソ用（極細）',temp:'湯92℃',water:75,wLabel:'湯',ice:0,shotSec:28,shotRange:[25,30],
   prep:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
    'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ そのお湯をマグに移してマグも温める。ホルダーの水気を拭く',
@@ -541,7 +542,7 @@ const RECIPES=[
 
  {id:'ec_ame_i',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アイスアメリカーノ',type:'ice',method:'EC885J エスプレッソ＋氷・冷水',
   base:9,doses:[{g:9,cups:1,label:'1杯 ☕'},{g:15,cups:2,label:'2杯 ☕☕'}],
-  grind:'エスプレッソ用（極細）',temp:'冷水（冷蔵）',water:50,wLabel:'冷水',ice:130,shotSec:28,
+  grind:'エスプレッソ用（極細）',temp:'冷水（冷蔵）',water:50,wLabel:'冷水',ice:130,shotSec:28,shotRange:[25,30],
   prep:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
    'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。※アイスでもマシン側の湯煎はする（抽出温度が落ちると酸味だけが立つ）。グラスは温めない',
@@ -555,7 +556,7 @@ const RECIPES=[
 
  {id:'ec_latte',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'カフェラテ',type:'hot',method:'EC885J エスプレッソ＋スチームミルク',
   base:15,doses:[{g:15,cups:2,label:'2杯 ☕☕'},{g:9,cups:1,label:'1杯 ☕'}],
-  grind:'エスプレッソ用（極細）',temp:'牛乳60〜65℃',water:125,wLabel:'牛乳',ice:0,shotSec:28,
+  grind:'エスプレッソ用（極細）',temp:'牛乳60〜65℃',water:125,wLabel:'牛乳',ice:0,shotSec:28,shotRange:[25,30],
   prep:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
    'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ そのお湯をマグに分けてマグも温める。ホルダーの水気を拭く',
@@ -572,7 +573,7 @@ const RECIPES=[
 
  {id:'ec_latte_i',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アイスカフェラテ',type:'ice',method:'EC885J エスプレッソ＋氷・冷たい牛乳',
   base:15,doses:[{g:15,cups:2,label:'2杯 ☕☕'},{g:9,cups:1,label:'1杯 ☕'}],
-  grind:'エスプレッソ用（極細）',temp:'牛乳（冷蔵）',water:100,wLabel:'牛乳',ice:100,shotSec:28,
+  grind:'エスプレッソ用（極細）',temp:'牛乳（冷蔵）',water:100,wLabel:'牛乳',ice:100,shotSec:28,shotRange:[25,30],
   prep:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
    'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。※アイスでもマシン側の湯煎はする（抽出温度が落ちると酸味だけが立つ）。グラスは温めない',
@@ -596,7 +597,7 @@ const RECIPES=[
    {atSec:90,pour:60,cum:180,tip:'後半（濃度）スタート'},
    {atSec:130,pour:60,cum:240},
    {atSec:160,pour:60,cum:300,tip:'注ぎきり'}],
-  finishSec:240,finishTip:'4:00前後、落ちきる寸前にドリッパーを外す',
+  finishSec:240,finishRange:[225,255],finishTip:'3:45〜4:15で落ちきり。寸前にドリッパーを外す',
   extra:'湯は豆×10（通常の1.5倍濃度）＝牛乳に負けない濃さを作るのが肝。抽出液と同量の牛乳（1:1）を合わせる。牛乳の上からコーヒーを静かに注いで軽くひと混ぜ。薄ければ湯を1:9へ・挽き目を一段細かく／重ければ1:11へ・前半を50g＋70gで甘め寄せ。'}
 ];
 
@@ -738,7 +739,7 @@ function renderBeanPick(){
     const sel=pickG[b.id]!==undefined;
     const g=sel?pickG[b.id]:'';
     return `<span class="chip ${sel?'sel':''}">
-      <span onclick="toggleBean('${b.id}')">${b.name}${ageStr(b)?` ・${ageStr(b)}`:''}${(()=>{const d=drinkState(b);return d&&d.k==='now'?' ・飲みごろ':d&&d.k==='over'?' ・ピーク過ぎ':'';})()}</span>
+      <span onclick="toggleBean('${b.id}')">${b.name}${ageStr(b)?` ・${ageStr(b)}`:''}${drinkShort(b)}</span>
       ${sel?`<input class="g" type="number" inputmode="numeric" value="${g}" placeholder="g" onchange="setBeanG('${b.id}',this.value)">g`:''}
     </span>`;
   }).join('');
@@ -848,6 +849,22 @@ document.addEventListener('visibilitychange',()=>{
 function drawTerm(){return cur&&cur.shotSec?'抽出時間':(cur&&cur.drawdown===false?'抽出完了':'落ち切り');}
 /* 目安の秒。エスプレッソは25〜30秒のショット時間そのもの（finishSecは画面の総尺なので別） */
 function targetSec(){return cur?(cur.shotSec||cur.finishSec||null):null;}
+/* 目安は点ではなく「幅」で持つ。落ち切りは1秒単位で狙えるものではないので、
+   幅に入っていれば「このままで」、外れた分だけを秒で返す。
+   レシピにrangeが無い場合だけ中心値から自動で作る（±8%・最小5秒/最大20秒） */
+function targetRange(r){
+  r=r||cur;if(!r)return null;
+  const ex=r.shotSec?r.shotRange:r.finishRange;
+  if(ex&&ex.length===2&&ex[1]>=ex[0])return[ex[0],ex[1]];
+  const t=r.shotSec||r.finishSec;if(!t)return null;
+  const w=Math.min(20,Math.max(5,Math.round(t*0.08)));
+  return[t-w,t+w];
+}
+/* 1分未満は「28秒」、以上は「2:30」（エスプレッソの秒数を0:28と書かないため） */
+function fmtT(s){return s<60?`${s}秒`:fmt(s);}
+function rangeStr(r){return !r?'—':(r[1]<60?`${r[0]}〜${r[1]}秒`:`${fmt(r[0])}〜${fmt(r[1])}`);}
+/* 幅からの外れ秒。幅の中なら0 */
+function rangeOff(sec,r){return !r?null:(sec<r[0]?r[0]-sec:(sec>r[1]?sec-r[1]:0));}
 function stampDraw(){
   if(drawSec===null){drawSec=tSec;stopTimer();document.getElementById('tPlay').textContent='再開';}
   else{drawSec=null;}
@@ -855,31 +872,44 @@ function stampDraw(){
 }
 function paintDraw(){
   const btn=document.getElementById('tDraw'),note=document.getElementById('tDrawNote'),term=drawTerm();
-  if(drawSec===null){btn.className='btn blue';btn.textContent=`⏱ ${term}を記録`;note.style.display='none';note.textContent='';}
+  if(drawSec===null){
+    btn.className='btn blue';btn.textContent=`⏱ ${term}を記録`;
+    const r=targetRange();
+    note.style.display=r?'block':'none';
+    note.textContent=r?`${term}の目安は ${rangeStr(r)}（幅で見ます）。落ちきったらタップ。`:'';
+  }
   else{
     btn.className='btn ghost';btn.textContent=`${term} ${fmt(drawSec)} ／ タップで取り消し`;
     const t=drawAdvice(drawSec);
     note.style.display=t?'block':'none';note.textContent=t;
   }
 }
-/* 目安との差から次回の挽き目を提案する */
+/* 目安の「幅」のどこにいるかで次回の挽き目を提案する。
+   幅の中＝このまま／わずかに外＝半段／はっきり外＝一段、の3段階で返す */
 function drawAdvice(sec){
-  const tg=targetSec();
-  if(sec===null||!cur||!tg)return '';
-  const term=drawTerm(),d=sec-tg;
-  /* エスプレッソは25〜30秒に入っているかで見る（挽き目が一番効くのがここ） */
-  if(cur.shotSec){
-    if(sec>=25&&sec<=30)return `${sec}秒＝適正レンジ（25〜30秒）。挽き目はこのままで。`;
-    return sec<25
-      ?`${sec}秒＝速すぎ（目安25〜30秒）。挽き目が粗いか粉が少なめ。次回は少し細かく。`
-      :`${sec}秒＝遅すぎ（目安25〜30秒）。挽き目が細かいか詰めすぎ。次回は少し粗く、タンピングも軽めに。`;
+  const r=targetRange();
+  if(sec===null||!cur||!r)return '';
+  const term=drawTerm(),band=rangeStr(r),esp=!!cur.shotSec;
+  const w=r[1]-r[0],off=rangeOff(sec,r);
+  if(off===0){
+    const pos=w<=0?'':(sec-r[0]<=w/3?'（幅の早い側）':(r[1]-sec<=w/3?'（幅の遅い側）':'（ほぼ真ん中）'));
+    return `${fmtT(sec)}＝${term}の目安 ${band} の中${pos}。挽き目はこのままで。`;
   }
-  if(Math.abs(d)<=10)return `${term}の目安 ${fmt(tg)} とほぼ同じ。挽き目はこのままで。`;
-  const head=`${term}の目安 ${fmt(tg)} より ${Math.abs(d)}秒${d<0?'早い':'遅い'}。`;
-  if(cur.drawdown===false)return head;
-  return head+(d<0
-    ?'落ちが速い＝挽き目が粗いかも。味が薄ければ次回は少し細かく。'
-    :'落ちが遅い＝挽き目が細かいかも。渋み・雑味が出ていたら次回は少し粗く。');
+  const fast=sec<r[0];
+  /* 「わずか」の線は目安そのものの長さで決める（28秒のエスプレッソと3:30のドリップで同じ5秒は違う） */
+  const slight=off<=Math.max(5,Math.round(r[0]*0.08));
+  const head=`${fmtT(sec)}＝${term}の目安 ${band} より${off}秒${fast?'早い':'遅い'}。`;
+  if(esp)return head+(fast
+    ?(slight?'わずかに速いだけ。気になれば挽き目を半段細かく、タンピングを少し強めに。'
+            :'挽き目が粗いか粉が少なめ。次回は一段細かく。')
+    :(slight?'わずかに遅いだけ。気になれば挽き目を半段粗く、タンピングも少し軽めに。'
+            :'挽き目が細かいか詰めすぎ。次回は一段粗く、タンピングも軽めに。'));
+  if(cur.drawdown===false)return head+'この時間は浸漬・押し下げの手順で決まるので、挽き目より次回のタイミングを合わせて。';
+  return head+(fast
+    ?(slight?'落ちがやや速い程度。味が薄ければ次回は半段細かく。'
+            :'落ちが速い＝挽き目が粗いかも。次回は一段細かく。')
+    :(slight?'落ちがやや遅い程度。渋み・雑味が出ていたら次回は半段粗く。'
+            :'落ちが遅い＝挽き目が細かいかも。次回は一段粗く。'));
 }
 function stopTimer(){if(tInt){clearInterval(tInt);tInt=null;}tRun=false;keepAwake(false);}
 /* 経過は加算ではなく実時刻から求める（画面オフ中もブラウザに数えさせない） */
@@ -952,7 +982,7 @@ function readDraw(){
 function paintRecDraw(){
   const sec=readDraw();
   document.getElementById('recDrawNote').textContent=sec===null
-    ?`タイマーで記録しそびれた時はここに入力できます（目安 ${targetSec()?(cur.shotSec?'25〜30秒':fmt(targetSec())):'—'}）`
+    ?`タイマーで記録しそびれた時はここに入力できます（目安 ${rangeStr(targetRange())}）`
     :drawAdvice(sec);
 }
 function toRecord(){
@@ -974,7 +1004,7 @@ function saveBrew(){
   brews.unshift({
     id:'br'+Date.now(),date:new Date().toISOString(),
     recipe:cur.name,group:cur.group,recipeId:cur.id,dose,beans:used,
-    drawSec:readDraw(),targetSec:targetSec(),drawLabel:drawTerm(),
+    drawSec:readDraw(),targetSec:targetSec(),targetRange:targetRange(),drawLabel:drawTerm(),
     rate:{...recRate},stars:recStars,grind:grindSet,
     again:document.getElementById('recAgain').classList.contains('on'),
     note:document.getElementById('recNote').value.trim()
@@ -1155,12 +1185,27 @@ function applyPaste(){
 }
 
 /* ---- 飲みごろ（焙煎後日数とカードの範囲から判定） ---- */
+/* k=early/now/soon/over、left=飲みごろ終了までの残り日数（終了日が未登録ならnull）、
+   until=飲みごろ開始までの日数。「あと何日飲めるのか」を数で持たせる */
 function drinkState(b){
   const a=ageDays(b),f=+b.drinkFrom||0,t=+b.drinkTo||0;
   if(a===null||(!f&&!t))return null;
-  if(f&&a<f)return{k:'early',s:`あと${f-a}日で飲みごろ`};
-  if(t&&a>t)return{k:'over',s:`飲みごろ過ぎ（${f||'?'}〜${t}日）`};
-  return{k:'now',s:`飲みごろ（${f||'?'}〜${t||'?'}日）`};
+  const win=f&&t?`${f}〜${t}日`:(t?`〜${t}日`:`${f}日〜`);
+  if(f&&a<f)return{k:'early',left:null,until:f-a,s:`あと${f-a}日で飲みごろ（${win}）`};
+  if(t&&a>t)return{k:'over',left:0,until:null,s:`飲みごろ過ぎ（${win}／${a-t}日超過）`};
+  if(!t)return{k:'now',left:null,until:null,s:`飲みごろ（${win}）`};
+  const left=t-a;
+  return{k:left<=3?'soon':'now',left,until:null,
+    s:left===0?`飲みごろ 今日が最終日（${win}）`
+      :`飲みごろ 残り${left}日（${win}）`};
+}
+/* 豆を選ぶチップなど、幅の狭いところに出す短い版 */
+function drinkShort(b){
+  const d=drinkState(b);if(!d)return '';
+  if(d.k==='early')return ` ・飲みごろまで${d.until}日`;
+  if(d.k==='over')return ' ・ピーク過ぎ';
+  if(d.left===null)return ' ・飲みごろ';
+  return d.left===0?' ・飲みごろ最終日':` ・飲みごろ残り${d.left}日`;
 }
 
 function beanForm(id){
@@ -1232,8 +1277,10 @@ function renderBrews(){
     const grindTag=(b.grind!=null)?`<span class="tag">挽 ${(+b.grind).toFixed(1)}</span>`:'';
     let drawTag='';
     if(b.drawSec!=null){
-      const d=b.targetSec?b.drawSec-b.targetSec:null;
-      const diff=d===null||d===0?'':`（目安${d>0?'+':'−'}${Math.abs(d)}s）`;
+      /* 幅を持つ前の記録は targetSec しかないので点として扱う */
+      const rg=b.targetRange||(b.targetSec?[b.targetSec,b.targetSec]:null);
+      const off=rg?(b.drawSec<rg[0]?rg[0]-b.drawSec:(b.drawSec>rg[1]?b.drawSec-rg[1]:0)):null;
+      const diff=off===null?'':(off===0?'（目安内）':`（目安${b.drawSec<rg[0]?'−':'+'}${off}s）`);
       drawTag=`<span class="tag y">${b.drawLabel||'落ち切り'} ${fmt(b.drawSec)}${diff}</span>`;
     }
     return `<div class="item">
@@ -1258,22 +1305,31 @@ function histTab(t){
   if(t==='stat')renderStats();else renderBrews();
 }
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
-/* 挽き目（横）×落ち切り（縦）を★で色分けした散布図。狙いの設定が目で分かるように */
-function scatter(list,target,label){
+/* 挽き目（横）×落ち切り（縦）を★で色分けした散布図。狙いの設定が目で分かるように。
+   目安は1本の線ではなく帯で描く（点を狙うものではないため） */
+function scatter(list,rg,label){
   label=label||'落ち切り';
   const pts=list.filter(b=>b.drawSec!=null&&b.grind!=null);
   if(pts.length<2)return`<div class="lgd">${label}と挽き目がそろった記録が2回分たまると、ここに散布図が出ます。</div>`;
   const W=320,H=150,L=34,R=10,T=12,B=26;
-  const ys=pts.map(p=>p.drawSec).concat(target?[target]:[]);
+  const ys=pts.map(p=>p.drawSec).concat(rg?[rg[0],rg[1]]:[]);
   let y0=Math.min(...ys),y1=Math.max(...ys);
   if(y1===y0){y0-=10;y1+=10;}
   const sx=g=>L+((Math.min(10,Math.max(1,g))-1)/9)*(W-L-R);
   const sy=v=>T+(1-(v-y0)/(y1-y0))*(H-T-B);
   const col=s=>s>=4?'#e2342b':s===3?'#1f50a0':'#8a8578';
   const dots=pts.map(p=>`<circle cx="${sx(p.grind).toFixed(1)}" cy="${sy(p.drawSec).toFixed(1)}" r="${p.stars>=4?7:5}" fill="${col(p.stars||0)}" stroke="#16140f" stroke-width="2"/>`).join('');
-  const tline=target&&target>=y0&&target<=y1
-    ?`<line x1="${L}" y1="${sy(target).toFixed(1)}" x2="${W-R}" y2="${sy(target).toFixed(1)}" stroke="#16140f" stroke-width="2" stroke-dasharray="5 4"/>
-      <text x="${W-R}" y="${(sy(target)-4).toFixed(1)}" text-anchor="end" font-size="10" fill="#16140f">目安 ${fmt(target)}</text>`:'';
+  const tline=(()=>{
+    if(!rg)return '';
+    const lo=Math.max(y0,rg[0]),hi=Math.min(y1,rg[1]);
+    if(hi<y0||lo>y1)return '';
+    const yTop=sy(hi),h=Math.max(2,sy(lo)-yTop);
+    const lbl=rg[0]===rg[1]?`目安 ${fmtT(rg[0])}`:`目安 ${rangeStr(rg)}`;
+    return `<rect x="${L}" y="${yTop.toFixed(1)}" width="${W-L-R}" height="${h.toFixed(1)}" fill="#f4c20d" opacity=".5"/>
+      <line x1="${L}" y1="${yTop.toFixed(1)}" x2="${W-R}" y2="${yTop.toFixed(1)}" stroke="#16140f" stroke-width="2" stroke-dasharray="5 4"/>
+      <line x1="${L}" y1="${(yTop+h).toFixed(1)}" x2="${W-R}" y2="${(yTop+h).toFixed(1)}" stroke="#16140f" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="${W-R}" y="${Math.max(T+9,yTop-4).toFixed(1)}" text-anchor="end" font-size="10" fill="#16140f">${lbl}</text>`;
+  })();
   return `<svg viewBox="0 0 ${W} ${H}" role="img">
     <line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="#16140f" stroke-width="2"/>
     <line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#16140f" stroke-width="2"/>
@@ -1283,7 +1339,7 @@ function scatter(list,target,label){
     <text x="${L}" y="${H-8}" font-size="10" fill="#16140f">挽き目 1（細）</text>
     <text x="${W-R}" y="${H-8}" font-size="10" text-anchor="end" fill="#16140f">10（粗）</text>
   </svg>
-  <div class="lgd">縦＝${label}／横＝挽き目。<span style="color:#e2342b;font-weight:800">●</span> ★4以上　<span style="color:#1f50a0;font-weight:800">●</span> ★3　<span style="color:#8a8578;font-weight:800">●</span> ★2以下</div>`;
+  <div class="lgd">縦＝${label}／横＝挽き目。${tline?'<span style="background:#f4c20d;padding:0 6px;border:2px solid #16140f">　</span> 目安の幅　':''}<span style="color:#e2342b;font-weight:800">●</span> ★4以上　<span style="color:#1f50a0;font-weight:800">●</span> ★3　<span style="color:#8a8578;font-weight:800">●</span> ★2以下</div>`;
 }
 function renderStats(){
   const el=document.getElementById('statView');
@@ -1292,12 +1348,16 @@ function renderStats(){
   brews.forEach(b=>{(groups[b.recipe]=groups[b.recipe]||[]).push(b);});
   el.innerHTML=Object.keys(groups).map(name=>{
     const list=groups[name];
-    const target=list.find(b=>b.targetSec)?.targetSec||null;
+    const rg=list.find(b=>b.targetRange)?.targetRange
+      ||(()=>{const t=list.find(b=>b.targetSec)?.targetSec;return t?[t,t]:null;})();
     const draws=list.filter(b=>b.drawSec!=null).map(b=>b.drawSec);
     const stars=list.filter(b=>b.stars).map(b=>b.stars);
     const grinds=list.filter(b=>b.grind!=null).map(b=>+b.grind);
     const dAvg=avg(draws),sAvg=avg(stars),gAvg=avg(grinds);
-    const diff=dAvg!=null&&target?Math.round(dAvg-target):null;
+    /* 平均が幅の中に入っていれば「目安内」。外れた分だけを秒で出す */
+    const dRound=dAvg!=null?Math.round(dAvg):null;
+    const off=dRound!=null&&rg?(dRound<rg[0]?rg[0]-dRound:(dRound>rg[1]?dRound-rg[1]:0)):null;
+    const diffTxt=off===null?'':(off===0?'（目安内）':`（目安${dRound<rg[0]?'−':'+'}${off}s）`);
     const label=list[0].drawLabel||'落ち切り';
     const rated=list.filter(b=>b.stars>=1).sort((a,b)=>b.stars-a.stars);
     const best=rated[0];
@@ -1309,11 +1369,11 @@ function renderStats(){
       <div class="kv">
         <span>回数 <b>${list.length}</b></span>
         <span>★平均 <b>${sAvg!=null?sAvg.toFixed(1):'—'}</b></span>
-        <span>${label}平均 <b>${dAvg!=null?fmt(Math.round(dAvg)):'—'}</b>${diff!=null?`（目安${diff>0?'+':'−'}${Math.abs(diff)}s）`:''}</span>
+        <span>${label}平均 <b>${dRound!=null?fmt(dRound):'—'}</b>${diffTxt}</span>
         <span>挽き目平均 <b>${gAvg!=null?gAvg.toFixed(1):'—'}</b></span>
       </div>
       <div class="best">${bestTxt}</div>
-      ${scatter(list,target,label)}
+      ${scatter(list,rg,label)}
     </div>`;
   }).join('');
 }
