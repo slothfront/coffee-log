@@ -188,6 +188,29 @@ textarea.in{resize:vertical;min-height:54px}
 .empty{text-align:center;padding:36px 14px;opacity:.55;font-weight:600}
 .empty .big{font-family:var(--disp);font-weight:900;font-size:46px;color:var(--ink);opacity:.25;margin-bottom:6px}
 
+/* ---- espresso card（エスプレッソ系はタイマーなし・量と手順をカードで） ---- */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px}
+.tile{border:var(--line);background:#fff;padding:10px 12px;min-width:0}
+.tile.hi{background:var(--yellow)}
+.tile.wide{grid-column:1/-1}
+.tile .k{font-family:var(--disp);font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.tile .v{font-family:var(--disp);font-weight:900;font-size:32px;line-height:1;margin-top:4px;white-space:nowrap}
+.tile .v small{font-size:15px;font-weight:800;margin-left:2px}
+.tile .v .x{font-size:16px;font-weight:800;opacity:.7;margin-left:6px}
+.tile .s{font-size:11px;font-weight:600;opacity:.75;margin-top:5px;line-height:1.4}
+.mw{border:var(--line);background:var(--ink);color:var(--paper);padding:12px 14px;margin-top:8px;display:flex;align-items:center;gap:14px}
+.mw .w{font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.1em;opacity:.8;flex:none;line-height:1.3}
+.mw .t{font-family:var(--disp);font-weight:900;font-size:30px;line-height:1}
+.mw .d{font-size:11px;opacity:.85;line-height:1.45;margin-top:5px}
+.how{list-style:none;border:var(--line);background:#fff;margin-top:12px;counter-reset:h}
+.how li{counter-increment:h;position:relative;padding:11px 12px 11px 42px;border-top:2px solid var(--ink);font-size:14px;font-weight:600;line-height:1.5}
+.how li:first-child{border-top:none}
+.how li::before{content:counter(h);position:absolute;left:12px;top:10px;font-family:var(--disp);font-weight:900;font-size:18px;color:var(--red)}
+.how li.key{background:#faf3d8}
+.seg button small{display:block;font-family:var(--body);font-weight:700;font-size:10px;letter-spacing:0;text-transform:none;opacity:.7;margin-top:2px}
+.seg.sm button{padding:8px;font-size:12px}
+.seg.sm{margin-bottom:4px}
+
 /* ---- nav ---- */
 .nav{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;display:flex;background:var(--ink);border-top:var(--line)}
 .nav button{flex:1;background:none;border:none;color:var(--paper);padding:13px 4px 16px;font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.5;border-right:1px solid #3a362c}
@@ -238,6 +261,25 @@ textarea.in{resize:vertical;min-height:54px}
     <div class="muted" id="doseHint">豆を選ぶと合計量が自動で入ります。ブレンドは複数選択できます。</div>
   </div>
 
+  <div class="box" id="strengthBox" style="display:none">
+    <h3>濃さ<span style="font-weight:500;font-size:11px;opacity:.6"> ／ 湯・ミルクの量が変わります</span></h3>
+    <div class="seg" id="strengthSeg" style="margin-bottom:6px"></div>
+    <div class="muted" id="strengthHint"></div>
+  </div>
+
+  <div class="box" id="milkBox" style="display:none">
+    <h3>ミルク</h3>
+    <div class="seg" id="milkSeg" style="margin-bottom:6px"></div>
+    <div id="mwWrap">
+      <div class="muted" style="margin-top:10px">レンジのワット数（選択は記憶します）</div>
+      <div class="seg sm" id="mwSeg"></div>
+    </div>
+    <div class="muted" id="milkHint"></div>
+  </div>
+
+  <div id="espCard"></div>
+  <div class="eyebrow" id="recOnlyLbl" style="display:none;margin-top:18px">FOR THE LOG ／ 記録用・任意</div>
+
   <div class="box">
     <h3>挽き目<span style="font-weight:500;font-size:11px;opacity:.6"> ／ グラインダー設定・記録用</span></h3>
     <div class="score-box" style="border:none;padding:4px 0 2px;margin:0">
@@ -257,7 +299,7 @@ textarea.in{resize:vertical;min-height:54px}
 
   <div id="scaledTable"></div>
   <div class="spacer"></div>
-  <button class="btn red" onclick="startBrew()">タイマー開始</button>
+  <button class="btn red" id="goBtn" onclick="startBrew()">タイマー開始</button>
 </section>
 
 <!-- ============ TIMER ============ -->
@@ -525,80 +567,90 @@ const RECIPES=[
   finishSec:170,finishRange:[160,190],finishTip:'2:40〜3:10。目的の量で外す。フィルターの残り湯は全部落とし切らない方が美味しい',
   extra:'比率の目安＝15:1（豆20g）〜10:1（豆30g）。焙煎1週間以上前の豆は蒸らしを最長60秒まで。'},
 
- /* --- エスプレッソ系：豆量はバスケットの2択（doses）／steps は1杯ぶんを cups 倍でスケール --- */
+ /* --- エスプレッソ系：タイマーは使わない（2026-09-12〜）。杯数（doses）・濃さ（strengths）・
+        ミルク（milk＝牛乳／豆乳の切替）で量を決め、手順（how）をカードで見せる。
+        how の {water}{milk}{mw} などのトークンは espView() の値で埋める。
+        {t:'…',soy:'…',key:true} の形は豆乳のときだけ文言を変える／key＝液体を入れる要の手順（黄色）。
+        shotSec／shotRange は記録画面の「抽出時間」の目安にだけ使う --- */
  {id:'ec_ame',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アメリカーノ',type:'hot',method:'EC885J エスプレッソ＋湯',
   base:9,doses:[{g:9,cups:1,label:'1杯 ☕'},{g:15,cups:2,label:'2杯 ☕☕'}],
   grind:'エスプレッソ用（極細）',temp:'湯92℃',water:75,wLabel:'湯',ice:0,shotSec:28,shotRange:[25,30],
-  prep:[
+  strengths:[{label:'濃いめ',ratio:'1:2',water:50},{label:'標準',ratio:'1:3',water:75,def:true},{label:'軽め',ratio:'1:4',water:100}],
+  how:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
-   'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ そのお湯をマグに移してマグも温める。ホルダーの水気を拭く',
-   'フィルターに粉 → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
-   'マグの湯を捨て、湯（92℃）を先に注いでおく＝クレマが層で残るロングブラック式'],
-  steps:[
-   {atSec:0,pour:75,cum:75,blm:true,tip:'湯はマグに用意済み。ホルダーを装着して抽出ボタンを押す＝ここから計測'},
-   {atSec:25,pour:25,cum:100,tip:'25〜30秒で出れば適正。出たら湯の入ったマグへ静かに注ぐ'}],
-  finishSec:28,finishTip:'25〜30秒で自動停止すれば適正。⏱で抽出時間を記録',
-  extra:'濃さ＝1:2（湯50g・濃いめ）／1:3（湯75g・標準）／1:4（湯100g・軽め）。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。重さで揃えたいときは定量設定で校正する。ぬるいときは湯煎を長めに／抽出温度を「高」へ。'},
+   '{filter}フィルター＋ホルダーを空のまま装着し、{btn}で湯出し（湯煎）。そのお湯を{mugs}に移してマグも温め、ホルダーの水気を拭く',
+   'フィルターに粉{dose}g → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
+   {t:'マグの湯を捨て、<b>湯{water}g（92℃）</b>を{each}先に注いでおく＝クレマが層で残るロングブラック式',key:true},
+   'ホルダー装着 → 小さいカップを置いて{btn}を押す（自動停止）。25〜30秒で{shot}出れば適正。速すぎ＝粗い／遅すぎ＝細かい',
+   'エスプレッソを{shotEach}湯の入ったマグへ静かに注ぐ → 約{total}mL{each}'],
+  extra:'設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。重さで揃えたいときは定量設定で校正する。ぬるいときは湯煎を長めに／抽出温度を「高」へ（♨️を10秒長押し→☕→♨️）。教科書どおり（エスプレッソが先・湯を後）にすると混ざりきってすっきりする代わりにクレマは消える。'},
 
  {id:'ec_ame_i',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アイスアメリカーノ',type:'ice',method:'EC885J エスプレッソ＋氷・冷水',
   base:9,doses:[{g:9,cups:1,label:'1杯 ☕'},{g:15,cups:2,label:'2杯 ☕☕'}],
   grind:'エスプレッソ用（極細）',temp:'冷水（冷蔵）',water:50,wLabel:'冷水',ice:130,shotSec:28,shotRange:[25,30],
-  prep:[
+  strengths:[{label:'濃いめ',ratio:'1:1.5',water:37},{label:'標準',ratio:'1:2',water:50,def:true},{label:'軽め',ratio:'1:3',water:75}],
+  how:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
-   'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。※アイスでもマシン側の湯煎はする（抽出温度が落ちると酸味だけが立つ）。グラスは温めない',
-   'フィルターに粉 → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
-   'グラスに氷 → 冷水の順で先に入れておく。氷は多めに（少ないと溶けて薄まる）'],
-  steps:[
-   {atSec:0,pour:50,cum:50,blm:true,tip:'氷と冷水はグラスに用意済み。ホルダーを装着して抽出ボタンを押す＝ここから計測'},
-   {atSec:25,pour:25,cum:75,tip:'25〜30秒で出れば適正。氷のグラスへ静かに注ぎ、すぐひと混ぜして急冷する'}],
-  finishSec:28,finishTip:'25〜30秒で自動停止すれば適正。⏱で抽出時間を記録',
-  extra:'濃さ＝1:1.5（冷水37g・濃いめ）／1:2（50g・標準）／1:3（75g・軽め＝ホットと同じ比率）。氷の溶け分が加水になるので、ホットの1:3より水は少なめから始める。エスプレッソは氷に直接当てず、グラスの縁から静かに落とすとクレマの層が残る。2杯（☕☕）は氷・冷水も2杯ぶんの合計なので、グラス2つに半分ずつ分ける。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。'},
+   '{filter}フィルター＋ホルダーを空のまま装着し、{btn}で湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。アイスでもマシン側の湯煎はする（抽出温度が落ちると酸味だけが立つ）。グラスは温めない',
+   'フィルターに粉{dose}g → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
+   {t:'{glasses}に<b>氷{ice}g</b>{each} → <b>冷水{water}g</b>{each}の順で先に入れる。氷は多めに（少ないと溶けて薄まる）',key:true},
+   'ホルダー装着 → 小さいカップを置いて{btn}を押す（自動停止）。25〜30秒で{shot}出れば適正。速すぎ＝粗い／遅すぎ＝細かい',
+   'エスプレッソを{shotEach}氷に直接当てず、グラスの縁から静かに落とす（クレマが層で残る）→ すぐひと混ぜして急冷'],
+  extra:'氷の溶け分が加水になるので、ホットの1:3より水は少なめから始める。薄まりが早いときは氷を大きく。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。'},
 
- {id:'ec_latte',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'カフェラテ',type:'hot',method:'EC885J エスプレッソ＋スチームミルク',
+ {id:'ec_latte',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'カフェラテ',type:'hot',method:'EC885J エスプレッソ＋牛乳／豆乳（レンジ）',
   base:15,doses:[{g:15,cups:2,label:'2杯 ☕☕'},{g:9,cups:1,label:'1杯 ☕'}],
-  grind:'エスプレッソ用（極細）',temp:'牛乳60〜65℃',water:125,wLabel:'牛乳',ice:0,shotSec:28,shotRange:[25,30],
-  prep:[
+  grind:'エスプレッソ用（極細）',temp:'ミルク60〜65℃',water:125,wLabel:'ミルク',ice:0,shotSec:28,shotRange:[25,30],
+  milk:{
+   cow:{label:'牛乳',strengths:[{label:'濃いめ',ratio:'1:4',water:100},{label:'標準',ratio:'1:5',water:125,def:true},{label:'マグ寄り',ratio:'1:6',water:150}],
+        hint:'成分無調整が向く。レンジなら泡は立たないぶん失敗もない。泡が欲しい日は温めた牛乳をフレンチプレスで20〜30回上下させて乗せる'},
+   soy:{label:'豆乳',strengths:[{label:'濃いめ',ratio:'1:5',water:125},{label:'標準',ratio:'1:6',water:150,def:true},{label:'軽め',ratio:'1:8',water:200}],
+        hint:'＝ソイラテ。60〜65℃まで・沸騰させない（膜が張り、コーヒーの酸で分離する）。調製豆乳・バリスタ用が分離しにくい。深煎りのほうが安全'}},
+  how:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
-   'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ そのお湯をマグに分けてマグも温める。ホルダーの水気を拭く',
-   'フィルターに粉 → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
-   'ピッチャーに冷たい牛乳を計り入れる（ピッチャーの1/3〜1/2まで）。成分無調整・冷蔵庫から出したてが泡が安定する'],
-  steps:[
-   {atSec:0,pour:25,cum:25,blm:true,tip:'ホルダーを装着して抽出ボタンを押す＝ここから計測'},
-   {atSec:28,pour:0,cum:25,tip:'自動停止したら⏱で抽出時間を記録 → そのまま「再開」を押してスチームへ'},
-   {atSec:40,pour:0,cum:25,tip:'♨️でスチーム予熱。予熱中に一度つまみを開いてノズルの水抜き（そのまま入れると牛乳が薄まる）'},
-   {atSec:60,pour:125,cum:150,tip:'空気を入れる5〜10秒（チチチ・〜37℃）→ 深く沈めて渦。側面が3秒持てない＝60〜65℃で止める'},
-   {atSec:105,pour:0,cum:150,tip:'つまみを閉じてノズルを抜く → 拭いて空吹かし。台に打って大きい泡を割り、回して艶を出す'}],
-  finishSec:135,finishTip:'エスプレッソの上にミルクを静かに注ぐ（30秒以内に）',
-  extra:'濃さ＝1:4（牛乳100g・濃いめ）／1:5（125g・標準）／1:6（150g・マグ寄り）。ラテの泡は5mm前後（カプチーノの1〜2cmより薄い）。70℃を超えない（甘みが飛ぶ）。泡が粗いときは空気を入れる時間を3〜5秒に短くして渦を長く。ピッチャーが無ければフレンチプレスで代用（60〜65℃の牛乳をプランジャー20〜30回）。フロッサーは60秒以上続けない。'},
+   '{filter}フィルター＋ホルダーを空のまま装着し、{btn}で湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。マグは{milkName}と一緒にレンジで温まるので湯煎しなくてよい',
+   'フィルターに粉{dose}g → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
+   {t:'{mugs}に<b>牛乳{water}g</b>{each}を入れ、ラップなしで<b>レンジ {mw}</b>。取り出してひと混ぜ、指で触れて「熱いが持てる」＝60〜65℃。足りなければ10秒ずつ',
+    soy:'{mugs}に<b>豆乳{water}g</b>{each}を入れ、ラップなしで<b>レンジ {mw}</b>。取り出してひと混ぜ、指で触れて「熱いが持てる」＝60〜65℃。<b>沸騰させない・膜が張る前に止める</b>。足りなければ10秒ずつ',key:true},
+   'ホルダー装着 → 小さいカップを置いて{btn}を押す（自動停止）。25〜30秒で{shot}出れば適正。速すぎ＝粗い／遅すぎ＝細かい',
+   {t:'エスプレッソを{shotEach}温めた牛乳の上から静かに注ぐ → 軽くひと混ぜ。約{total}mL{each}',
+    soy:'エスプレッソを{shotEach}温めた豆乳の上から静かに注ぐ（豆乳が先・コーヒーが後。逆だと分離しやすい）→ 軽くひと混ぜ。約{total}mL{each}'}],
+  extra:'コーヒーが負ける → 濃いめへ／粉を目安位置の上限寄りに。重い・苦い → 軽めへ。ぬるい → 抽出温度を「高」に（♨️を10秒長押し→☕→♨️）／レンジを10秒足す。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。'},
 
- {id:'ec_latte_i',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アイスカフェラテ',type:'ice',method:'EC885J エスプレッソ＋氷・冷たい牛乳',
+ {id:'ec_latte_i',drawdown:false,group:'エスプレッソ ／ デロンギ EC885J',name:'アイスカフェラテ',type:'ice',method:'EC885J エスプレッソ＋氷・冷たい牛乳／豆乳',
   base:15,doses:[{g:15,cups:2,label:'2杯 ☕☕'},{g:9,cups:1,label:'1杯 ☕'}],
-  grind:'エスプレッソ用（極細）',temp:'牛乳（冷蔵）',water:100,wLabel:'牛乳',ice:100,shotSec:28,shotRange:[25,30],
-  prep:[
+  grind:'エスプレッソ用（極細）',temp:'ミルク（冷蔵）',water:100,wLabel:'ミルク',ice:100,shotSec:28,shotRange:[25,30],
+  milk:{
+   cow:{label:'牛乳',strengths:[{label:'濃いめ',ratio:'1:3',water:75},{label:'標準',ratio:'1:4',water:100,def:true},{label:'マグ寄り',ratio:'1:5',water:125}],
+        hint:'温めない（温めた泡は氷を溶かす）。泡が欲しいときは1杯30gを取り分け、フレンチプレスで冷たいまま20〜30回＝コールドフォームを最後に乗せる'},
+   soy:{label:'豆乳',strengths:[{label:'濃いめ',ratio:'1:3',water:75},{label:'標準',ratio:'1:4',water:100,def:true},{label:'マグ寄り',ratio:'1:5',water:125}],
+        hint:'＝アイスソイラテ【未検証・牛乳と同じ比率の自家版】。冷たいままなので膜は張らないが、酸で分離はしうる。調製豆乳・バリスタ用が安全。分離したら次回は氷に当てて冷ましながら落とす'}},
+  how:[
    '水タンクMAX → 電源ON。☕・☕☕が点滅 → 点灯で予熱完了',
-   'フィルター＋ホルダーを空のまま装着して湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。※アイスでもマシン側の湯煎はする（抽出温度が落ちると酸味だけが立つ）。グラスは温めない',
-   'フィルターに粉 → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
-   'グラスに氷 → 冷たい牛乳の順で先に入れておく。牛乳はスチームしない（温めた泡は氷を溶かす）'],
-  steps:[
-   {atSec:0,pour:100,cum:100,blm:true,tip:'氷と冷たい牛乳はグラスに用意済み。ホルダーを装着して抽出ボタンを押す＝ここから計測'},
-   {atSec:25,pour:25,cum:125,tip:'25〜30秒で出れば適正。氷に当てずグラスの縁から静かに落とす（層になる）。飲む直前にひと混ぜ'}],
-  finishSec:28,finishTip:'25〜30秒で自動停止すれば適正。⏱で抽出時間を記録',
-  extra:'濃さ＝1:3（牛乳75g・濃いめ）／1:4（100g・標準）／1:5（125g・マグ寄り）。氷100gのうち20〜30gが溶けて加水になるので、ホットの1:5より牛乳は少なめから。順番は氷→牛乳→エスプレッソ（ホットの「エスプレッソが先」と逆）。泡が欲しいときは牛乳のうち1杯30gを取り分け、フレンチプレスで冷たいまま20〜30回プレスしてコールドフォームにし、最後に乗せる（スチームは使わない）。薄まりが早いときは氷を大きく、または牛乳氷にする。2杯（☕☕）は氷・牛乳も2杯ぶんの合計なので、グラス2つに半分ずつ分ける。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。'},
+   '{filter}フィルター＋ホルダーを空のまま装着し、{btn}で湯出し（湯煎）→ 湯は捨て、ホルダーの水気を拭く。アイスでもマシン側の湯煎はする（抽出温度が落ちると酸味だけが立つ）。グラスは温めない',
+   'フィルターに粉{dose}g → ならしてタンピング。押し詰めた後に目安位置を確認し、縁の粉を払う',
+   {t:'{glasses}に<b>氷{ice}g</b>{each} → <b>冷たい{milkName}{water}g</b>{each}の順で先に入れる。{milkName}は温めない',key:true},
+   'ホルダー装着 → 小さいカップを置いて{btn}を押す（自動停止）。25〜30秒で{shot}出れば適正。速すぎ＝粗い／遅すぎ＝細かい',
+   'エスプレッソを{shotEach}氷に直接当てず、グラスの縁から静かに落とす（層になる）→ 飲む直前にひと混ぜ（層のままだと下だけ甘い）'],
+  extra:'氷100gのうち20〜30gが溶けて加水になるので、ホットの1:5より{milkName}は少なめから。順番は氷→{milkName}→エスプレッソ（ホットと逆）。薄まりが早いときは氷を大きく、または牛乳氷にする。設定値(mL)とカップに出る重さ(g)は一致しない（☕☕の60mL設定で実測約50g）。'},
 
- {id:'ml_olait',drawdown:true,group:'ミルク ／ ドリップ',name:'カフェオレ',type:'hot',method:'HARIO V60 02',
+ /* --- カフェオレ：ドリップ（タイマーあり）＋牛乳／豆乳をレンジで。豆乳を選ぶとソイオレ --- */
+ {id:'ml_olait',drawdown:true,group:'ミルク ／ ドリップ',name:'カフェオレ',type:'hot',method:'HARIO V60 02＋牛乳／豆乳（レンジ）',
   base:30,grind:'中挽き',temp:'92℃',water:300,ice:0,milkEq:true,
+  strengths:[{label:'濃いめ',ratio:'1:9',water:270},{label:'標準',ratio:'1:10',water:300,def:true},{label:'軽め',ratio:'1:11',water:330}],
+  milk:{cow:{label:'牛乳',hint:'抽出液と同量（1:1）。レンジで60〜65℃・沸騰させない'},
+        soy:{label:'豆乳',hint:'＝ソイオレ。抽出液と同量（1:1）。60〜65℃まで・沸騰させない（膜が張り、コーヒーの酸で分離する）。調製豆乳・バリスタ用が分離しにくい。深煎りのほうが安全'}},
   prep:[
-   'マグを湯で温めておく（牛乳を冷やさないため。厚手のマグほど効く）',
-   '牛乳を60〜65℃に温める。沸騰させない',
-   '温めた牛乳を、湯を捨てたマグへ先に入れておく'],
+   'マグに{milkName}{milk}gを入れ、ラップなしでレンジ {mw}。取り出してひと混ぜ、指で触れて「熱いが持てる」＝60〜65℃。足りなければ10秒ずつ（マグも一緒に温まる）',
+   '{milkName}はマグに入れたまま待つ＝{milkName}が先・コーヒーが後（豆乳はこの順でないと分離しやすい）'],
   steps:[
    {atSec:0,pour:60,cum:60,blm:true,tip:'蒸らし兼1投目。粉が多く層が深いのでV60は02サイズ'},
    {atSec:45,pour:60,cum:120,tip:'前半完了＝ここで味が決まる'},
    {atSec:90,pour:60,cum:180,tip:'後半（濃度）スタート'},
    {atSec:130,pour:60,cum:240},
    {atSec:160,pour:60,cum:300,tip:'注ぎきり'}],
-  finishSec:240,finishRange:[225,255],finishTip:'3:45〜4:15で落ちきり。寸前にドリッパーを外す',
-  extra:'湯は豆×10（通常の1.5倍濃度）＝牛乳に負けない濃さを作るのが肝。抽出液と同量の牛乳（1:1）を合わせる。牛乳の上からコーヒーを静かに注いで軽くひと混ぜ。薄ければ湯を1:9へ・挽き目を一段細かく／重ければ1:11へ・前半を50g＋70gで甘め寄せ。'}
+  finishSec:240,finishRange:[225,255],finishTip:'3:45〜4:15で落ちきり。寸前にドリッパーを外す → ミルクの上から静かに注いで軽くひと混ぜ',
+  extra:'湯は豆×10（通常の1.5倍濃度）＝{milkName}に負けない濃さを作るのが肝。抽出液（湯−豆が吸う分）と同量の{milkName}を合わせる。薄ければ濃いめ（1:9）へ・挽き目を一段細かく／重ければ軽め（1:11）へ・前半を50g＋70gで甘め寄せ。甘さが欲しければ砂糖より深煎り＋65℃寄り。'}
 ];
 
 /* ===================== STORE ===================== */
@@ -692,6 +744,54 @@ function renderRecipes(){
 
 /* ===================== SETUP ===================== */
 let cur=null,dose=20,pickG={},grindSet=5.0,doseIdx=0; // pickG: beanId -> grams
+
+/* ---- 濃さ・ミルク（牛乳／豆乳）・レンジのワット数。ミルクとワット数は記憶する ---- */
+const KM='coffee_mw',KMK='coffee_milk';
+let strengthIdx=0,milkKind='cow',mwWatt=600;
+try{const w=+localStorage.getItem(KM);if([500,600,700].includes(w))mwWatt=w;
+    if(localStorage.getItem(KMK)==='soy')milkKind='soy';}catch(e){}
+function curStrengths(){if(!cur)return null;const m=cur.milk&&cur.milk[milkKind];return (m&&m.strengths)||cur.strengths||null;}
+function curStrength(){const s=curStrengths();return s?s[Math.min(strengthIdx,s.length-1)]:null;}
+function defStrength(){const s=curStrengths();if(!s)return 0;const i=s.findIndex(x=>x.def);return i<0?0:i;}
+/* 1杯（ドリップは基準豆量）あたりの湯・ミルク量。濃さを選んでいればその値 */
+function curWater(){const s=curStrength();return s?s.water:cur.water;}
+/* ドリップ系の注湯を濃さで伸縮する倍率（氷には掛けない） */
+function sMul(){return cur.water?curWater()/cur.water:1;}
+function milkName(){const m=cur&&cur.milk&&cur.milk[milkKind];return m?m.label:'牛乳';}
+function pickStrength(i){strengthIdx=i;renderStrength();renderScaled();}
+function pickMilk(k){milkKind=k;try{localStorage.setItem(KMK,k)}catch(e){}
+  strengthIdx=defStrength(); /* 牛乳と豆乳で濃さの段が違うレシピがあるので標準に戻す */
+  renderStrength();renderMilk();renderScaled();}
+function pickWatt(w){mwWatt=w;try{localStorage.setItem(KM,String(w))}catch(e){}renderMilk();renderScaled();}
+function renderStrength(){
+  const box=document.getElementById('strengthBox'),s=curStrengths();
+  box.style.display=s?'block':'none';if(!s)return;
+  document.getElementById('strengthSeg').innerHTML=s.map((x,i)=>
+    `<button class="${i===strengthIdx?'on':''}" onclick="pickStrength(${i})">${x.label}<small>${x.ratio}</small></button>`).join('');
+  const x=curStrength(),liq=cur.milk?milkName():(cur.wLabel||'湯');
+  document.getElementById('strengthHint').textContent=`${x.label}＝${cur.shotSec?'エスプレッソ':'豆'}：${liq} が ${x.ratio}`;
+}
+function renderMilk(){
+  const box=document.getElementById('milkBox');
+  box.style.display=cur.milk?'block':'none';if(!cur.milk)return;
+  document.getElementById('milkSeg').innerHTML=Object.keys(cur.milk).map(k=>
+    `<button class="${k===milkKind?'on':''}" onclick="pickMilk('${k}')">${cur.milk[k].label}</button>`).join('');
+  const hot=cur.type!=='ice';
+  document.getElementById('mwWrap').style.display=hot?'block':'none';
+  if(hot)document.getElementById('mwSeg').innerHTML=[500,600,700].map(w=>
+    `<button class="${w===mwWatt?'on':''}" onclick="pickWatt(${w})">${w}W</button>`).join('');
+  document.getElementById('milkHint').textContent=cur.milk[milkKind].hint||'';
+}
+/* レンジの秒数＝Q＝mcΔT を吸収効率0.7で割った目安（5秒刻み）。
+   冷蔵5℃から、牛乳は62℃（c=3.9）・豆乳は膜が張る前の60℃（c=4.0）まで。
+   レンジの個体差が大きいので「まずこの秒数→混ぜて→10秒ずつ」の起点として使う */
+function mwSec(g,kind){const c=kind==='soy'?4.0:3.9,dT=kind==='soy'?55:57;return Math.max(10,Math.round(g*c*dT/(0.7*mwWatt)/5)*5);}
+function mwStr(s){return s<60?`${s}秒`:`${Math.floor(s/60)}分${s%60?(s%60)+'秒':''}`;}
+function mwTxt(g){return `${mwWatt}Wで約${mwStr(mwSec(g,milkKind))}`;}
+/* 文中の {water} などをビューの値で埋める */
+function fill(t,v){return String(t).replace(/\{(\w+)\}/g,(_,k)=>v[k]!==undefined?v[k]:'');}
+/* 記録に残す「牛乳／豆乳・濃さ」の一言 */
+function variantStr(){if(!cur)return '';const p=[];if(cur.milk)p.push(milkName());const s=curStrength();if(s)p.push(`${s.label} ${s.ratio}`);return p.join('・');}
 /* 豆量に対する倍率。エスプレッソ系はバスケットが2択なので「杯数」で倍率を決める（9g→15gは1.67倍ではない） */
 function facF(){return cur.doses?cur.doses[doseIdx].cups:dose/cur.base;}
 function pickDose(i){doseIdx=i;dose=cur.doses[i].g;renderDoseFixed();renderBeanPick();renderScaled();}
@@ -702,9 +802,14 @@ function renderDoseFixed(){
   document.getElementById('doseVal').textContent=dose;
 }
 function openSetup(id){
-  cur=RECIPES.find(r=>r.id===id);pickG={};
-  const fixed=!!cur.doses;
+  cur=RECIPES.find(r=>r.id===id);pickG={};drawSec=null;
+  const fixed=!!cur.doses,esp=!!cur.shotSec;
   doseIdx=0;dose=fixed?cur.doses[0].g:cur.base;
+  strengthIdx=defStrength();renderStrength();renderMilk();
+  /* エスプレッソ系はタイマーを使わない：カードを見て淹れ、末尾のボタンで記録へ */
+  document.getElementById('recOnlyLbl').style.display=esp?'block':'none';
+  const gb=document.getElementById('goBtn');
+  gb.textContent=esp?'記録する':'タイマー開始';gb.className=esp?'btn blue':'btn red';gb.onclick=esp?toRecord:startBrew;
   document.getElementById('doseFixed').style.display=fixed?'flex':'none';
   document.getElementById('doseStep').style.display=fixed?'none':'flex';
   document.getElementById('doseHint').textContent=fixed
@@ -714,8 +819,8 @@ function openSetup(id){
   document.getElementById('setupGroup').textContent=cur.group;
   document.getElementById('setupName').textContent=cur.name;
   const wl=cur.wLabel||'湯';
-  document.getElementById('setupBase').textContent=
-    `基準 豆${fixed?cur.doses[0].g:cur.base}g／${wl}${cur.water}g`+(fixed?'（1杯ぶん）':'')+(cur.ice?`／氷${cur.ice}g`:'')+`・${cur.grind}・${cur.temp}`;
+  document.getElementById('setupBase').textContent=esp?cur.method:
+    `基準 豆${cur.base}g／${wl}${cur.water}g`+(cur.ice?`／氷${cur.ice}g`:'')+`・${cur.grind}・${cur.temp}`;
   grindSet=5.0;
   const gs=document.getElementById('grindSlider');gs.value=5.0;document.getElementById('grindVal').textContent='5.0';
   gs.oninput=()=>{grindSet=parseFloat(gs.value);document.getElementById('grindVal').textContent=grindSet.toFixed(1);};
@@ -754,9 +859,11 @@ function toggleBean(id){
 }
 function setBeanG(id,v){pickG[id]=Math.max(0,+v||0);syncDose();renderBeanPick();}
 
-function scale(){const f=facF();return cur.steps.map(s=>({...s,pourS:Math.round(s.pour*f),cumS:Math.round(s.cum*f)}));}
+function scale(){const f=facF()*sMul();return cur.steps.map(s=>({...s,pourS:Math.round(s.pour*f),cumS:Math.round(s.cum*f)}));}
 function renderScaled(){
-  const rows=scale();const f=facF(),esp=!!cur.shotSec;
+  if(cur.shotSec){document.getElementById('scaledTable').innerHTML='';renderEspCard();return;}
+  document.getElementById('espCard').innerHTML='';
+  const rows=scale();const f=facF(),fw=f*sMul(),st=curStrength();
   let body=rows.map((s,i)=>`<tr class="${s.blm?'blm':''}">
     <td class="num">${i+1}</td>
     <td>${fmt(s.atSec)}</td>
@@ -764,18 +871,51 @@ function renderScaled(){
     <td>${s.cumS}g</td>
     <td class="tip">${s.tip||''}</td></tr>`).join('');
   const iceR=cur.ice?`<tr><td class="num">氷</td><td>—</td><td>${Math.round(cur.ice*f)}g</td><td>—</td><td class="tip">急冷用</td></tr>`:'';
-  /* カフェオレ：牛乳＝抽出液と同量。抽出液は「湯 − 豆が吸う分（自重の約2倍）」で見積もる */
-  const milkG=cur.milkEq?Math.max(0,Math.round(cur.water*f-dose*2)):0;
-  const milkR=milkG?`<tr><td class="num">乳</td><td>—</td><td>${milkG}g</td><td>—</td><td class="tip">60〜65℃に温めてマグへ先に入れる（抽出液と1:1）</td></tr>`:'';
-  let prep=cur.prep?`<div class="note"><b>準備</b>（タイマー前）<br>${cur.prep.map((p,i)=>`${i+1}. ${p}`).join('<br>')}</div>`:'';
-  let extra=cur.extra?`<div class="note">${cur.extra}</div>`:'';
-  let iceNote=cur.type==='ice'?`<div class="note">${esp?`アイスは氷・${cur.wLabel||'冷水'}も杯数ぶんスケールしています。氷の溶け分が加水になるので、${cur.wLabel||'冷水'}はホットより少なめから。`:'アイスは湯量・氷量も豆量に比例スケールしています。'}出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
-  let espNote=esp?`<div class="note">タイマーは<b>抽出だけ</b>を計ります（準備は上のリスト）。目安は <b>25〜30秒</b>。2杯のときは表の数字も2杯ぶんの合計です。</div>`:'';
+  /* カフェオレ：牛乳（豆乳）＝抽出液と同量。抽出液は「湯 − 豆が吸う分（自重の約2倍）」で見積もる */
+  const milkG=cur.milkEq?Math.max(0,Math.round(cur.water*fw-dose*2)):0;
+  const v=milkG?{milk:milkG,milkName:milkName(),mw:mwTxt(milkG),watt:mwWatt}:{milkName:milkName()};
+  const milkR=milkG?`<tr><td class="num">乳</td><td>—</td><td>${milkG}g</td><td>—</td><td class="tip">${v.milkName}をレンジ ${v.mw} → 60〜65℃。マグへ先に入れる（抽出液と1:1）</td></tr>`:'';
+  let prep=cur.prep?`<div class="note"><b>準備</b>（タイマー前）<br>${cur.prep.map((p,i)=>`${i+1}. ${fill(p,v)}`).join('<br>')}</div>`:'';
+  let extra=cur.extra?`<div class="note">${fill(cur.extra,v)}</div>`:'';
+  let iceNote=cur.type==='ice'?`<div class="note">アイスは湯量・氷量も豆量に比例スケールしています。出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
   document.getElementById('scaledTable').innerHTML=
-    `<div class="eyebrow" style="margin-top:14px">RECIPE ／ 豆${dose}g${cur.doses?`・${cur.doses[doseIdx].label}`:''}</div>
+    `<div class="eyebrow" style="margin-top:14px">RECIPE ／ 豆${dose}g${st?`・${st.label} ${st.ratio}`:''}${cur.milk?`・${milkName()}`:''}</div>
      ${prep}
-     <table class="rtable"><thead><tr><th>#</th><th>経過</th><th>${esp?'量':'注湯'}</th><th>累計</th><th>ポイント</th></tr></thead>
-     <tbody>${body}${milkR}${iceR}</tbody></table>${extra}${espNote}${iceNote}`;
+     <table class="rtable"><thead><tr><th>#</th><th>経過</th><th>注湯</th><th>累計</th><th>ポイント</th></tr></thead>
+     <tbody>${body}${milkR}${iceR}</tbody></table>${extra}${iceNote}`;
+}
+
+/* ---- エスプレッソ系のレシピカード（タイマーなし）：量→レンジ→手順 ---- */
+function espView(){
+  const d=cur.doses[doseIdx],n=d.cups,w=curWater(),mn=milkName();
+  const v={cups:n,dose:d.g,filter:n===2?'2杯用':'1杯用',btn:n===2?'☕☕':'☕',shot:`約${25*n}g`,
+    shotEach:n===2?'25gずつ':'',each:n===2?'ずつ':'',mugs:n===2?'マグ2つ':'マグ',glasses:n===2?'グラス2つ':'グラス',
+    water:w,waterTot:w*n,ice:cur.ice,iceTot:cur.ice*n,milkName:mn,total:25+w,watt:mwWatt,mw:'',mw2:''};
+  if(cur.milk&&cur.type!=='ice'){const s=mwSec(w,milkKind);v.mwSec=s;v.mw=`${mwWatt}Wで約${mwStr(s)}`;v.mw2=mwStr(s*2);}
+  return v;
+}
+function renderEspCard(){
+  const v=espView(),milk=!!cur.milk,ice=cur.type==='ice',st=curStrength(),two=v.cups===2;
+  const x=two?`<span class="x">×2</span>`:'';
+  const tot=g=>two?`<div class="s">計 ${g}g（2杯ぶん）</div>`:'';
+  const liq=milk?v.milkName:cur.wLabel;
+  const tiles=[
+   `<div class="tile"><div class="k">粉</div><div class="v">${v.dose}<small>g</small></div><div class="s">${v.filter}フィルター・${v.btn}・エスプレッソ用（極細）</div></div>`,
+   `<div class="tile"><div class="k">エスプレッソ</div><div class="v">${v.shot}</div><div class="s">${v.btn}で自動停止・25〜30秒が目安${two?'・25gずつに分ける':''}</div></div>`,
+   milk
+    ?`<div class="tile hi"><div class="k">${v.milkName}${ice?'（冷たいまま）':''}</div><div class="v">${v.water}<small>g</small>${x}</div><div class="s">${ice?'冷蔵庫から出したて・温めない':`レンジで60〜65℃に${milkKind==='soy'?'・沸騰させない':''}`}</div>${tot(v.waterTot)}</div>`
+    :`<div class="tile hi"><div class="k">${cur.wLabel}</div><div class="v">${v.water}<small>g</small>${x}</div><div class="s">${ice?'冷蔵の水・先にグラスへ':'92℃前後・先にマグへ'}</div>${tot(v.waterTot)}</div>`,
+   ice?`<div class="tile hi"><div class="k">氷</div><div class="v">${v.ice}<small>g</small>${x}</div><div class="s">大きめの氷・多めに</div>${tot(v.iceTot)}</div>`:'',
+   `<div class="tile wide"><div class="k">出来上がり</div><div class="v">約${v.total}<small>mL</small>${x}</div><div class="s">エスプレッソ25g＋${liq}${v.water}g${ice?'＋氷の溶け分':''}${st?`（${st.label} ${st.ratio}）`:''}</div></div>`
+  ].join('');
+  const mw=(milk&&!ice)?`<div class="mw"><div class="w">レンジ<br>${mwWatt}W</div><div><div class="t">約${mwStr(v.mwSec)}</div><div class="d">${v.milkName}${v.water}gをマグごと・ラップなし。混ぜて温度をみて、足りなければ10秒ずつ${two?`。2つ同時に温めるなら約${v.mw2}`:''}</div></div></div>`:'';
+  const how=`<ol class="how">${cur.how.map(h=>{
+    const t=typeof h==='string'?h:((milkKind==='soy'&&h.soy)||h.t);
+    return `<li${(typeof h!=='string'&&h.key)?' class="key"':''}>${fill(t,v)}</li>`;}).join('')}</ol>`;
+  const extra=cur.extra?`<div class="note">${fill(cur.extra,v)}</div>`:'';
+  document.getElementById('espCard').innerHTML=
+    `<div class="eyebrow" style="margin-top:14px">RECIPE ／ ${cur.doses[doseIdx].label}${milk?`・${v.milkName}`:''}${st?`・${st.label} ${st.ratio}`:''}</div>
+     <div class="tiles">${tiles}</div>${mw}${how}${extra}`;
 }
 
 /* ===================== TIMER ===================== */
@@ -982,20 +1122,24 @@ function readDraw(){
 function paintRecDraw(){
   const sec=readDraw();
   document.getElementById('recDrawNote').textContent=sec===null
-    ?`タイマーで記録しそびれた時はここに入力できます（目安 ${rangeStr(targetRange())}）`
+    ?(cur&&cur.shotSec
+      ?`抽出ボタンを押してから自動停止までの秒数を入れると、挽き目の提案が出ます（目安 ${rangeStr(targetRange())}・任意）`
+      :`タイマーで記録しそびれた時はここに入力できます（目安 ${rangeStr(targetRange())}）`)
     :drawAdvice(sec);
 }
 function toRecord(){
   stopTimer();recRate={acidity:0,sweet:0,body:0,after:0};recStars=0;
   document.getElementById('recNote').value='';
   document.getElementById('recAgain').classList.remove('on');
-  document.getElementById('recDrawTitle').textContent=`${drawTerm()}時間`;
+  const term=drawTerm();
+  document.getElementById('recDrawTitle').textContent=term.endsWith('時間')?term:`${term}時間`;
   document.getElementById('recDrawM').value=drawSec===null?'':Math.floor(drawSec/60);
   document.getElementById('recDrawS').value=drawSec===null?'':drawSec%60;
   paintRecDraw();
   buildPips();
   const names=Object.keys(pickG).map(id=>{const b=beans.find(x=>x.id===id);return b?`${b.name}(${pickG[id]||0}g)`:'';}).filter(Boolean);
-  document.getElementById('recHead').textContent=`${cur.name}・豆${dose}g`+(names.length?` ／ ${names.join(' + ')}`:'');
+  const vs=variantStr();
+  document.getElementById('recHead').textContent=`${cur.name}${vs?`（${vs}）`:''}・豆${dose}g`+(names.length?` ／ ${names.join(' + ')}`:'');
   go('record');
 }
 function saveBrew(){
@@ -1006,6 +1150,7 @@ function saveBrew(){
     recipe:cur.name,group:cur.group,recipeId:cur.id,dose,beans:used,
     drawSec:readDraw(),targetSec:targetSec(),targetRange:targetRange(),drawLabel:drawTerm(),
     rate:{...recRate},stars:recStars,grind:grindSet,
+    variant:variantStr()||null,
     again:document.getElementById('recAgain').classList.contains('on'),
     note:document.getElementById('recNote').value.trim()
   });
@@ -1275,6 +1420,7 @@ function renderBrews(){
     const rt=Object.keys(LBL).map(k=>b.rate&&b.rate[k]?`<span class="tag">${LBL[k]}${b.rate[k]}</span>`:'').join('');
     const stars=b.stars?`<span class="tag y">${'★'.repeat(b.stars)}</span>`:(b.score!=null?`<span class="tag y">総合 ${(+b.score).toFixed(1)}</span>`:'');
     const grindTag=(b.grind!=null)?`<span class="tag">挽 ${(+b.grind).toFixed(1)}</span>`:'';
+    const varTag=b.variant?`<span class="tag">${b.variant}</span>`:'';
     let drawTag='';
     if(b.drawSec!=null){
       /* 幅を持つ前の記録は targetSec しかないので点として扱う */
@@ -1286,7 +1432,7 @@ function renderBrews(){
     return `<div class="item">
       <div class="hd"><span class="t">${b.recipe}</span><span class="d">${ds}</span></div>
       <div class="sub">${beanTxt}</div>
-      <div class="tags">${stars}${drawTag}${grindTag}${rt} ${b.again?'<span class="flag">また淹れたい</span>':''}</div>
+      <div class="tags">${stars}${varTag}${drawTag}${grindTag}${rt} ${b.again?'<span class="flag">また淹れたい</span>':''}</div>
       ${b.note?`<div class="sub" style="margin-top:7px">“${b.note}”</div>`:''}
       <div style="margin-top:8px"><button class="del" onclick="delBrew('${b.id}')">削除</button></div>
     </div>`;
