@@ -211,6 +211,24 @@ textarea.in{resize:vertical;min-height:54px}
 .seg.sm button{padding:8px;font-size:12px}
 .seg.sm{margin-bottom:4px}
 
+/* ---- 記録の絞り込み（レシピ・国・豆・焙煎度）。たたんだ状態が既定で、絞り込み中は要約行だけ残る ---- */
+.flt{margin:-4px 0 14px}
+.flt-bar{display:flex;align-items:center;gap:10px}
+.flt-btn{border:var(--line);background:#fff;font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:9px 12px}
+.flt-btn.on{background:var(--ink);color:var(--paper)}
+.flt-cnt{margin-left:auto;font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.04em;opacity:.7}
+.flt-sum{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.flt-sum:empty{display:none}
+.flt-sum .chip{margin:0;padding:6px 9px;font-size:12px;background:var(--yellow)}
+.flt-sum .chip b{font-family:var(--disp);font-weight:900}
+.flt-sum .clr{border:none;background:none;font-weight:700;font-size:12px;text-decoration:underline;padding:6px 2px}
+.flt-panel{border:var(--line);background:#fff;padding:8px 12px;margin-top:8px}
+.flt-panel .ax{font-family:var(--disp);font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.65;margin:8px 0 5px}
+.flt-panel .chip{padding:7px 9px;font-size:13px;margin:0 6px 6px 0}
+.flt-panel .chip small{font-family:var(--disp);font-weight:800;font-size:11px;opacity:.55}
+.flt-panel .chip.sel small{opacity:.8}
+.flt-panel .muted{margin:4px 0 0}
+
 /* ---- nav ---- */
 .nav{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;display:flex;background:var(--ink);border-top:var(--line)}
 .nav button{flex:1;background:none;border:none;color:var(--paper);padding:13px 4px 16px;font-family:var(--disp);font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.5;border-right:1px solid #3a362c}
@@ -447,6 +465,14 @@ textarea.in{resize:vertical;min-height:54px}
   <div class="seg">
     <button id="segLog" class="on" onclick="histTab('log')">一覧</button>
     <button id="segStat" onclick="histTab('stat')">振り返り</button>
+  </div>
+  <div class="flt">
+    <div class="flt-bar">
+      <button class="flt-btn" id="fltBtn" onclick="toggleFlt()">絞り込み ▾</button>
+      <span class="flt-cnt" id="fltCnt"></span>
+    </div>
+    <div class="flt-sum" id="fltSum"></div>
+    <div class="flt-panel" id="fltPanel" style="display:none"></div>
   </div>
   <div id="brewList"></div>
   <div id="statView" style="display:none"></div>
@@ -1144,7 +1170,9 @@ function toRecord(){
 }
 function saveBrew(){
   const used=Object.keys(pickG).map(id=>{const b=beans.find(x=>x.id===id);
-    return{id,name:b?b.name:'(削除済)',g:+pickG[id]||0,age:b?ageDays(b):null};});
+    return{id,name:b?b.name:'(削除済)',g:+pickG[id]||0,age:b?ageDays(b):null,
+      /* 国・焙煎度の写し：豆を台帳から消したあとも絞り込めるように（2026-09-21〜。undefinedはJSONに残らない） */
+      origin:(b&&b.origin)||undefined,roast:(b&&b.roast)||undefined};});
   brews.unshift({
     id:'br'+Date.now(),date:new Date().toISOString(),
     recipe:cur.name,group:cur.group,recipeId:cur.id,dose,beans:used,
@@ -1290,7 +1318,17 @@ function normDate(v){
 }
 function normRoast(v){
   const s=String(v);
-  return ['中深煎り','浅煎り','中煎り','深煎り'].find(o=>s.includes(o))||'';
+  const j=['中深煎り','浅煎り','中煎り','深煎り'].find(o=>s.includes(o));
+  if(j)return j;
+  /* 英語・カナ表記（BEANS LOGカードなど）も4段に寄せる。日本の8段階に合わせ、
+     シティ／フルシティ＝中深、ミディアム／ハイ＝中、ライト／シナモン＝浅、フレンチ／イタリアン＝深。
+     「medium dark」を「medium」より先に見る */
+  const e=s.toLowerCase();
+  if(/medium[\s-]*dark|city|シティ/.test(e))return '中深煎り';
+  if(/medium|high|ミディアム|ハイ/.test(e))return '中煎り';
+  if(/light|cinnamon|ライト|シナモン/.test(e))return '浅煎り';
+  if(/dark|french|italian|espresso|フレンチ|イタリアン/.test(e))return '深煎り';
+  return '';
 }
 function parsePaste(txt){
   const out={};
@@ -1409,12 +1447,151 @@ async function deleteBean(){const id=document.getElementById('bId').value;
     leaveBeanEdit();}}
 function val(id){return document.getElementById(id).value.trim();}
 
+/* ===================== 絞り込み（一覧・振り返り共通） ===================== */
+/* 国名の表記ゆれをまとめる辞書：正規名（日本語）← 別表記（英語・カナ違い・有名な産地名）。
+   豆の「原産国／地域」は自由入力なので、絞り込みのときだけここで国に寄せる（台帳の文字は書き換えない） */
+const COUNTRY_ALIAS={
+  'エチオピア':['ethiopia','エチオピヤ','エチオピア','yirgacheffe','yirgachefe','イルガチェフェ','イルガチェフ','sidamo','シダモ','guji','グジ','harrar','ハラー'],
+  'ケニア':['kenya','nyeri','ニエリ','kirinyaga','キリニャガ'],
+  'コロンビア':['colombia','columbia','huila','ウイラ','ウィラ','nariño','narino','ナリーニョ','tolima','トリマ'],
+  'ブラジル':['brazil','brasil','cerrado','セラード','minas gerais','ミナスジェライス'],
+  'グアテマラ':['guatemala','グァテマラ','ガテマラ','antigua','アンティグア','huehuetenango','ウエウエテナンゴ'],
+  'コスタリカ':['costa rica','costarica','tarrazu','タラス'],
+  'ホンジュラス':['honduras'],
+  'エルサルバドル':['el salvador','salvador'],
+  'ニカラグア':['nicaragua'],
+  'パナマ':['panama','boquete','ボケテ'],
+  'メキシコ':['mexico','chiapas','チアパス','oaxaca','オアハカ'],
+  'ペルー':['peru'],
+  'ボリビア':['bolivia'],
+  'エクアドル':['ecuador'],
+  'ジャマイカ':['jamaica','blue mountain','ブルーマウンテン'],
+  'キューバ':['cuba'],
+  'ドミニカ':['dominican','dominica'],
+  'ハイチ':['haiti'],
+  'プエルトリコ':['puerto rico'],
+  'ハワイ':['hawaii','kona','コナ'],
+  'インドネシア':['indonesia','sumatra','スマトラ','mandheling','マンデリン','toraja','トラジャ','sulawesi','スラウェシ','java','ジャワ','bali','バリ','flores','フローレス'],
+  'パプアニューギニア':['papua new guinea','papua','パプア'],
+  '東ティモール':['timor','ティモール'],
+  'インド':['india'],
+  'ベトナム':['vietnam','viet nam'],
+  'ラオス':['laos'],
+  'タイ':['thailand'],
+  'ミャンマー':['myanmar'],
+  'ネパール':['nepal'],
+  '中国':['china','yunnan','雲南'],
+  '台湾':['taiwan'],
+  'フィリピン':['philippines'],
+  'イエメン':['yemen'],
+  'ルワンダ':['rwanda'],
+  'ブルンジ':['burundi'],
+  'タンザニア':['tanzania','kilimanjaro','キリマンジャロ'],
+  'ウガンダ':['uganda'],
+  'コンゴ':['congo','drc'],
+  'マラウイ':['malawi'],
+  'ザンビア':['zambia'],
+  'ジンバブエ':['zimbabwe'],
+  'カメルーン':['cameroon'],
+  'オーストラリア':['australia'],
+};
+/* 長い別表記から先に照合する（「インドネシア」を「インド」に取られないため） */
+const COUNTRY_LIST=(()=>{const a=[];Object.keys(COUNTRY_ALIAS).forEach(n=>{[n].concat(COUNTRY_ALIAS[n]).forEach(x=>a.push([x.toLowerCase(),n]));});return a.sort((p,q)=>q[0].length-p[0].length);})();
+/* 原産地の自由入力から国名を取り出す。「エチオピア／イルガチェフェ」「Ethiopia Yirgacheffe」→ エチオピア。
+   ブレンドで2か国書いてあれば両方。辞書に無ければ「／」等の区切りの前をそのまま国として扱う */
+function countriesOf(origin){
+  if(!origin)return[];
+  const raw=String(origin).normalize('NFKC');   // 半角カナ・全角英字をそろえる
+  let s=raw.toLowerCase();
+  const found=[];
+  COUNTRY_LIST.forEach(([al,name])=>{
+    let i=s.indexOf(al);
+    while(i>=0){found.push([i,name]);s=s.slice(0,i)+' '.repeat(al.length)+s.slice(i+al.length);i=s.indexOf(al);}
+  });
+  if(found.length){found.sort((a,b)=>a[0]-b[0]);return[...new Set(found.map(f=>f[1]))];}
+  const head=raw.split(/[\/／・、,，｜|（(]/)[0].trim();
+  return head?[head]:[];
+}
+const FLT_AX=[['recipe','レシピ'],['country','国'],['bean','豆'],['roast','焙煎度']];
+const FLT_NA='（不明）',FLT_NOBEAN='（豆の指定なし）';
+const flt={recipe:new Set(),country:new Set(),bean:new Set(),roast:new Set()};
+let fltOpen=false;
+/* 1件の記録が持つ「レシピ・国・豆・焙煎度」。国と焙煎度は豆台帳を id で引き（編集後の値を正とする）、
+   台帳から消えた豆は保存時の写し（origin／roast）で補う。写しも無ければ（不明） */
+function brewFacets(b){
+  const f={recipe:[b.recipe||FLT_NA],bean:[],country:[],roast:[]};
+  const bs=b.beans||[];
+  if(!bs.length)f.bean.push(FLT_NOBEAN);
+  bs.forEach(e=>{
+    const live=e.id?beans.find(x=>x.id===e.id):null;
+    f.bean.push(e.name||FLT_NA);
+    const org=(live&&live.origin)||e.origin||'';
+    const rst=(live&&live.roast)||e.roast||'';
+    const cs=countriesOf(org);
+    (cs.length?cs:[FLT_NA]).forEach(c=>f.country.push(c));
+    f.roast.push(normRoast(rst)||FLT_NA);
+  });
+  FLT_AX.forEach(([k])=>{f[k]=[...new Set(f[k])];});
+  return f;
+}
+function fltActive(){return FLT_AX.some(([k])=>flt[k].size);}
+/* 同じ軸の中は「どれか」（OR）、軸をまたぐと「すべて」（AND） */
+function brewMatches(f){return FLT_AX.every(([k])=>!flt[k].size||f[k].some(v=>flt[k].has(v)));}
+function filteredBrews(){return fltActive()?brews.filter(b=>brewMatches(brewFacets(b))):brews.slice();}
+/* 各軸の選択肢と件数。レシピはアプリのレシピ順・焙煎度は浅→深・国と豆は件数順。（不明）系は末尾 */
+function fltValues(){
+  const cnt={recipe:{},country:{},bean:{},roast:{}};
+  brews.forEach(b=>{const f=brewFacets(b);FLT_AX.forEach(([k])=>f[k].forEach(v=>{cnt[k][v]=(cnt[k][v]||0)+1;}));});
+  const order={recipe:RECIPES.map(r=>r.name),roast:['浅煎り','中煎り','中深煎り','深煎り']};
+  const out={};
+  FLT_AX.forEach(([k])=>{
+    const ord=order[k];
+    out[k]=Object.keys(cnt[k]).sort((a,b)=>{
+      const pa=a.startsWith('（'),pb=b.startsWith('（');if(pa!==pb)return pa?1:-1;
+      if(ord){const ia=ord.indexOf(a),ib=ord.indexOf(b);const ra=ia<0?ord.length:ia,rb=ib<0?ord.length:ib;if(ra!==rb)return ra-rb;}
+      if(cnt[k][b]!==cnt[k][a])return cnt[k][b]-cnt[k][a];
+      return a.localeCompare(b,'ja');
+    }).map(v=>[v,cnt[k][v]]);
+  });
+  return out;
+}
+const escH=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toggleFlt(){fltOpen=!fltOpen;renderFlt();}
+function fltToggle(k,v){if(!flt[k])return;if(flt[k].has(v))flt[k].delete(v);else flt[k].add(v);refreshHist();}
+function fltClear(){FLT_AX.forEach(([k])=>flt[k].clear());refreshHist();}
+function refreshHist(){renderFlt();if(histTabState==='stat')renderStats();else renderBrews();}
+function renderFlt(){
+  const vals=fltValues();
+  /* 記録が消えて無くなった値は選択から外す */
+  FLT_AX.forEach(([k])=>{const ok=new Set(vals[k].map(x=>x[0]));[...flt[k]].forEach(v=>{if(!ok.has(v))flt[k].delete(v);});});
+  const active=fltActive();
+  const btn=document.getElementById('fltBtn');
+  btn.textContent=fltOpen?'絞り込み ▴':'絞り込み ▾';
+  btn.classList.toggle('on',fltOpen||active);
+  const n=active?filteredBrews().length:brews.length;
+  document.getElementById('fltCnt').textContent=brews.length?(active?`${n}件 ／ 全${brews.length}件`:`全${brews.length}件`):'';
+  /* 値はユーザー入力（豆の名前など）なので onclick に埋めず data 属性で持ち、クリックは INIT の委譲で拾う */
+  const chip=(k,v,o)=>`<button class="chip${o.sel?' sel':''}" data-k="${k}" data-v="${escH(v)}">${escH(v)}${o.c!=null?` <small>${o.c}</small>`:''}${o.x?' <b>✕</b>':''}</button>`;
+  document.getElementById('fltSum').innerHTML=active
+    ?FLT_AX.map(([k])=>[...flt[k]].map(v=>chip(k,v,{x:true})).join('')).join('')+'<button class="clr" data-clear="1">すべて解除</button>'
+    :'';
+  const panel=document.getElementById('fltPanel');
+  panel.style.display=fltOpen?'block':'none';
+  if(!fltOpen)return;
+  panel.innerHTML=brews.length
+    ?FLT_AX.map(([k,lbl])=>`<div class="ax">${lbl}</div><div>${vals[k].map(([v,c])=>chip(k,v,{c,sel:flt[k].has(v)})).join('')}</div>`).join('')
+      +'<div class="muted">同じ行の中は「どれか」、行をまたぐと「すべて」に当てはまる記録に絞ります</div>'
+    :'<div class="muted">記録がたまると、ここで絞り込めます</div>';
+}
+
 /* ===================== HISTORY ===================== */
 const LBL={acidity:'酸',sweet:'甘',body:'体',after:'余'};
 function renderBrews(){
   const el=document.getElementById('brewList');
   if(!brews.length){el.innerHTML='<div class="empty"><div class="big">∅</div>まだ記録がありません</div>';return;}
-  el.innerHTML=brews.map(b=>{
+  const list=filteredBrews();
+  if(!list.length){el.innerHTML='<div class="empty"><div class="big">∅</div>この絞り込みに合う記録はありません</div>';return;}
+  el.innerHTML=list.map(b=>{
     const d=new Date(b.date);const ds=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     const beanTxt=b.beans&&b.beans.length?b.beans.map(x=>`${x.name}${x.g?`(${x.g}g)`:''}${x.age!=null?` ・焙煎後${x.age}日`:''}`).join(' + '):`豆${b.dose}g`;
     const rt=Object.keys(LBL).map(k=>b.rate&&b.rate[k]?`<span class="tag">${LBL[k]}${b.rate[k]}</span>`:'').join('');
@@ -1438,7 +1615,7 @@ function renderBrews(){
     </div>`;
   }).join('');
 }
-function delBrew(id){if(confirm('この記録を削除しますか？')){brews=brews.filter(x=>x.id!==id);save(KR,brews);renderBrews();}}
+function delBrew(id){if(confirm('この記録を削除しますか？')){brews=brews.filter(x=>x.id!==id);save(KR,brews);refreshHist();}}
 
 /* ===================== 振り返り ===================== */
 let histTabState='log';
@@ -1448,6 +1625,7 @@ function histTab(t){
   document.getElementById('segStat').classList.toggle('on',t==='stat');
   document.getElementById('brewList').style.display=t==='log'?'block':'none';
   document.getElementById('statView').style.display=t==='stat'?'block':'none';
+  renderFlt();
   if(t==='stat')renderStats();else renderBrews();
 }
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
@@ -1490,8 +1668,10 @@ function scatter(list,rg,label){
 function renderStats(){
   const el=document.getElementById('statView');
   if(!brews.length){el.innerHTML='<div class="empty"><div class="big">∅</div>記録がたまると、ここで振り返れます</div>';return;}
+  const picked=filteredBrews();   // 絞り込み中はその記録だけで集計（「この豆でV60を淹れたときの平均」が見える）
+  if(!picked.length){el.innerHTML='<div class="empty"><div class="big">∅</div>この絞り込みに合う記録はありません</div>';return;}
   const groups={};
-  brews.forEach(b=>{(groups[b.recipe]=groups[b.recipe]||[]).push(b);});
+  picked.forEach(b=>{(groups[b.recipe]=groups[b.recipe]||[]).push(b);});
   el.innerHTML=Object.keys(groups).map(name=>{
     const list=groups[name];
     const rg=list.find(b=>b.targetRange)?.targetRange
@@ -1532,6 +1712,10 @@ renderRecipes();
 paintAlertBtns();
 document.getElementById('recDrawM').addEventListener('input',paintRecDraw);
 document.getElementById('recDrawS').addEventListener('input',paintRecDraw);
+['fltSum','fltPanel'].forEach(id=>document.getElementById(id).addEventListener('click',e=>{
+  if(e.target.closest('[data-clear]')){fltClear();return;}
+  const t=e.target.closest('[data-k]');if(t)fltToggle(t.dataset.k,t.dataset.v);
+}));
 (async function(){
   mediaDB=await idbOpen();
   await hydratePhotos();
