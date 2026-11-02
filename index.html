@@ -100,7 +100,17 @@ textarea.in{resize:vertical;min-height:54px}
 .dial .clk{font-family:var(--disp);font-weight:800;font-size:20px;letter-spacing:.04em;margin-top:4px}
 .now{border:var(--line);background:var(--yellow);padding:12px;margin:8px 0;font-family:var(--disp);font-weight:900;font-size:21px;text-transform:uppercase}
 .now small{display:block;font-family:var(--body);font-weight:600;font-size:12px;text-transform:none;letter-spacing:0;margin-top:4px;opacity:.85}
-.next{font-size:13px;font-weight:700;opacity:.7;margin-bottom:10px}
+.next{display:flex;align-items:center;justify-content:space-between;gap:10px;border:var(--line);background:#fff;padding:10px 12px;margin:0 0 10px;text-align:left}
+.next:empty{display:none}
+.next .nl{font-family:var(--disp);font-weight:900;font-size:19px;line-height:1.15}
+.next .nl small{display:block;font-family:var(--body);font-weight:700;font-size:11px;letter-spacing:.08em;opacity:.65;margin-bottom:2px}
+.next .nl .tp{display:block;font-family:var(--body);font-weight:600;font-size:12px;margin-top:3px;opacity:.85}
+.next .cd{font-family:var(--disp);font-weight:900;font-size:30px;line-height:1;white-space:nowrap}
+.next .cd span{font-size:14px;opacity:.7}
+/* 注ぐ直前（PRE_SEC秒前〜）は予告帯を赤に。0秒で上の黄色い帯が「注ぐ」に切り替わる */
+.next.soon{background:var(--red);color:#fff;animation:soonPulse 1s steps(2,end) infinite}
+@keyframes soonPulse{50%{background:#b8241d}}
+@media (prefers-reduced-motion:reduce){.next.soon{animation:none}}
 .pour-list{border:var(--line);background:#fff;margin-top:10px}
 .pour-list .pr{display:flex;justify-content:space-between;padding:9px 12px;border-top:2px solid var(--ink);font-weight:600;font-size:14px}
 .pour-list .pr:first-child{border-top:none}
@@ -945,6 +955,7 @@ function renderEspCard(){
 }
 
 /* ===================== TIMER ===================== */
+const PRE_SEC=5;  // 予告帯が赤くなる秒数（注ぐ何秒前か）
 let tInt=null,tSec=0,tRun=false,tStepsCache=[],drawSec=null,tStart=0,fired=new Set();
 function startBrew(){tStepsCache=scale();resetTimer();go('timer');renderPourList();}
 function resetTimer(){stopTimer();tSec=0;tRun=false;drawSec=null;fired.clear();updTimer();paintDraw();document.getElementById('tPlay').textContent='スタート';}
@@ -1109,9 +1120,19 @@ function updTimer(){
     if(s.pourS>0)nowEl.innerHTML=(esp?`${s.pourS}g（累計${s.cumS}g）`:`${i+1}投目 ${s.pourS}g 注ぐ（累計${s.cumS}g）`)+`<small>${s.tip||''}</small>`;
     else nowEl.innerHTML=`${s.tip||'抽出中'}<small>累計${s.cumS}g</small>`;
   }
-  const nx=steps.find(s=>s.atSec>tSec);
-  if(nx){const d=nx.atSec-tSec;nextEl.textContent=`次：${fmt(nx.atSec)}（あと${d}秒）${nx.pourS>0?` → ${nx.pourS}g`:''}`;}
-  else{nextEl.textContent=cur.finishTip?`▸ ${cur.finishTip}`:'';}
+  /* 2段目＝予告帯。次の投を常に出し、注ぐPRE_SEC秒前から赤に変えて目で予告する（予告音は3秒前） */
+  const k=steps.findIndex(s=>s.atSec>tSec),nx=steps[k];
+  if(nx){const d=nx.atSec-tSec;
+    const what=nx.pourS>0?(esp?`${nx.pourS}g`:`${k+1}投目 ${nx.pourS}g`):(nx.tip||'操作');
+    const sub=nx.pourS>0?`<span class="tp">${fmt(nx.atSec)}に注ぐ（累計${nx.cumS}g）</span>`:`<span class="tp">${fmt(nx.atSec)}</span>`;
+    const soon=d<=PRE_SEC;
+    nextEl.className='next'+(soon?' soon':'');
+    nextEl.innerHTML=`<div class="nl"><small>${soon?'まもなく':'次'}</small>${what}${sub}</div><div class="cd">${d}<span>秒</span></div>`;}
+  else{const fin=cur.finishSec,r=targetRange();nextEl.className='next';
+    if(fin){const d=fin-tSec;
+      nextEl.innerHTML=`<div class="nl"><small>${drawTerm()}の目安 ${rangeStr(r)}</small>${cur.finishTip||''}</div>`
+        +(d>0?`<div class="cd">${d}<span>秒</span></div>`:'');}
+    else nextEl.innerHTML=cur.finishTip?`<div class="nl">${cur.finishTip}</div>`:'';}
   document.querySelectorAll('#pourList .pr').forEach((el,k)=>{
     el.classList.toggle('done',k<i);el.classList.toggle('cur',k===i);});
 }
