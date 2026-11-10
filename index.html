@@ -257,6 +257,13 @@ textarea.in{resize:vertical;min-height:54px}
 .note{font-size:12px;border-left:6px solid var(--blue);padding:6px 0 6px 10px;margin:10px 0;opacity:.85}
 .spacer{height:6px}
 .del{background:none;border:none;color:var(--red);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+/* バックアップ（2026-11-11〜） */
+.bk{border:var(--line);background:#fff;padding:14px;margin-top:22px}
+.bk h3{font-family:var(--disp);font-weight:900;font-size:16px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px}
+.bk .btn{margin-top:8px}
+.bk-warn{border:var(--line);border-left:10px solid var(--red);background:#fff;padding:10px 12px;margin:0 0 12px;font-size:13px;display:flex;align-items:center;gap:10px}
+.bk-warn b{font-weight:800}
+.bk-warn button{margin-left:auto;flex:none}
 </style>
 </head>
 <body>
@@ -487,8 +494,19 @@ textarea.in{resize:vertical;min-height:54px}
     <div class="flt-sum" id="fltSum"></div>
     <div class="flt-panel" id="fltPanel" style="display:none"></div>
   </div>
+  <div class="bk-warn" id="bkWarn" style="display:none"></div>
   <div id="brewList"></div>
   <div id="statView" style="display:none"></div>
+  <div class="bk" id="bkPanel">
+    <h3>バックアップ</h3>
+    <div class="muted" id="bkInfo"></div>
+    <div class="note">記録・豆・写真はこのスマホのブラウザの中にだけあります。アイコンの削除や閲覧データの削除で消えることがあるので、ときどきファイルに保存しておいてください。</div>
+    <button class="btn blue" onclick="bkExport(true)">ドライブなどに保存する</button>
+    <button class="btn ghost" onclick="bkExport(false)">この端末にダウンロード</button>
+    <button class="btn ghost" onclick="document.getElementById('bkFile').click()">ファイルから戻す</button>
+    <input type="file" id="bkFile" accept="application/json,.json" style="display:none" onchange="bkImport(this)">
+    <div class="muted">戻すときは、今ある記録は消さずに足りない分だけ足します。</div>
+  </div>
 </section>
 
 <!-- ============ LIGHTBOX ============ -->
@@ -1691,6 +1709,7 @@ function histTab(t){
   document.getElementById('statView').style.display=t==='stat'?'block':'none';
   renderFlt();
   if(t==='stat')renderStats();else renderBrews();
+  renderBackup();
 }
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
 /* 挽き目（横）×落ち切り（縦）を★で色分けした散布図。狙いの設定が目で分かるように。
@@ -1768,6 +1787,88 @@ function renderStats(){
   }).join('');
 }
 
+/* ===================== バックアップ（書き出し・戻す） ===================== */
+/* 2026-11-11〜。記録はブラウザの中にしか無く、ホーム画面のアイコンを消し直した時に全部消えたため。
+   ファイル1つ（JSON）に 豆・記録・設定・写真 をまとめる。戻すときは「足りない分だけ足す」（上書きしない）。 */
+const KBK='coffee_backup_at';                       // 最後に保存した日時（ISO）
+const BK_KEYS=[KB,KR,KM,KMK,KA];                    // ファイルに入れるlocalStorageの項目
+const BK_NAG_DAYS=7;                                // 新しい記録があって、これ以上あいたら知らせる
+function bkLast(){try{return localStorage.getItem(KBK)}catch(e){return null}}
+function bkDaysAgo(iso){return Math.floor((Date.now()-new Date(iso).getTime())/86400000);}
+function bkYmd(d){return `${String(d.getFullYear()).slice(2)}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
+function blobToDataURL(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b);});}
+async function dataURLToBlob(u){const r=await fetch(u);return r.blob();}
+function photoKeys(){return new Promise(res=>{
+  const st=idbStore('readonly');if(!st||!st.getAllKeys)return res([]);
+  const r=st.getAllKeys();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);});}
+
+function renderBackup(){
+  const last=bkLast(),info=document.getElementById('bkInfo'),warn=document.getElementById('bkWarn');
+  const nPh=beans.filter(b=>b.photo).length;
+  info.textContent=(last?`最後に保存：${new Date(last).toLocaleDateString('ja-JP')}（${bkDaysAgo(last)===0?'今日':bkDaysAgo(last)+'日前'}）`:'まだ保存していません')
+    +` ／ 記録${brews.length}件・豆${beans.length}件・写真${nPh}枚`;
+  /* 知らせる条件：保存していない記録がある かつ（一度も保存していない or 前回から7日以上） */
+  const unsaved=last?brews.filter(b=>b.date>last).length+beans.filter(b=>+String(b.id).slice(2)>new Date(last).getTime()).length:brews.length+beans.length;
+  const nag=unsaved>0&&(!last||bkDaysAgo(last)>=BK_NAG_DAYS);
+  warn.style.display=nag?'flex':'none';
+  if(nag)warn.innerHTML=`<span>${last?`前回の保存から<b>${bkDaysAgo(last)}日</b>`:'<b>まだ一度も保存していません</b>'}。保存していない記録・豆が<b>${unsaved}件</b>あります。</span>
+    <button class="btn red sm" onclick="bkExport(true)">保存</button>`;
+}
+
+async function bkExport(share){
+  try{
+    const ls={};BK_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!==null)ls[k]=v}catch(e){}});
+    const photos={};
+    for(const key of await photoKeys()){const b=await photoGet(key);if(b)photos[key]=await blobToDataURL(b);}
+    const now=new Date();
+    const data={app:'BREW',version:1,savedAt:now.toISOString(),counts:{brews:brews.length,beans:beans.length,photos:Object.keys(photos).length},localStorage:ls,photos};
+    const name=`BREW_backup_${bkYmd(now)}.json`;
+    const file=new File([JSON.stringify(data)],name,{type:'application/json'});
+    let done=false;
+    if(share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:name});done=true;}
+      catch(e){if(e&&e.name==='AbortError')return;}       // 共有画面を閉じた＝保存していない
+    }
+    if(!done){
+      const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+      if(share)alert('共有画面が使えないので、端末の「ダウンロード」に保存しました。');
+    }
+    try{localStorage.setItem(KBK,now.toISOString())}catch(e){}
+    renderBackup();
+  }catch(e){alert('保存できませんでした：'+(e&&e.message||e));}
+}
+
+async function bkImport(input){
+  const f=input.files&&input.files[0];input.value='';
+  if(!f)return;
+  let data;
+  try{data=JSON.parse(await f.text());}catch(e){alert('ファイルが読めませんでした（BREWのバックアップではないようです）。');return;}
+  if(!data||data.app!=='BREW'||!data.localStorage){alert('BREWのバックアップファイルではありません。');return;}
+  const ls=data.localStorage;
+  const parse=k=>{try{return JSON.parse(ls[k]||'[]')||[]}catch(e){return[]}};
+  const inBeans=parse(KB),inBrews=parse(KR),photos=data.photos||{};
+  const haveB=new Set(beans.map(x=>x.id)),haveR=new Set(brews.map(x=>x.id));
+  const addB=inBeans.filter(x=>x&&x.id&&!haveB.has(x.id)),addR=inBrews.filter(x=>x&&x.id&&!haveR.has(x.id));
+  const when=data.savedAt?new Date(data.savedAt).toLocaleDateString('ja-JP'):'日付不明';
+  if(!addB.length&&!addR.length){alert(`${when}のバックアップです。足りない記録・豆はありませんでした（もう全部入っています）。`);return;}
+  if(!confirm(`${when}のバックアップから戻します。\n記録 ${addR.length}件・豆 ${addB.length}件を足します。\n（今ある記録はそのまま残ります）`))return;
+  let phFail=0;
+  for(const b of addB){
+    if(b.photo&&photos[b.photo]){
+      try{const blob=await dataURLToBlob(photos[b.photo]);await photoPut(b.photo,blob);photoURL[b.photo]=URL.createObjectURL(blob);}
+      catch(e){phFail++;}
+    }
+  }
+  beans=beans.concat(addB);
+  brews=brews.concat(addR).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const ok=save(KB,beans)&&save(KR,brews);
+  /* 設定（ミルク・ワット数・通知）は、この端末にまだ無いときだけ戻す */
+  [KM,KMK,KA].forEach(k=>{try{if(ls[k]!=null&&localStorage.getItem(k)===null)localStorage.setItem(k,ls[k])}catch(e){}});
+  if(ok)alert(`戻しました：記録 ${addR.length}件・豆 ${addB.length}件`+(phFail?`（写真${phFail}枚は戻せませんでした）`:''));
+  refreshHist();renderBackup();
+}
+
 /* ===================== UTIL ===================== */
 function fmt(s){return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
 
@@ -1780,6 +1881,8 @@ document.getElementById('recDrawS').addEventListener('input',paintRecDraw);
   if(e.target.closest('[data-clear]')){fltClear();return;}
   const t=e.target.closest('[data-k]');if(t)fltToggle(t.dataset.k,t.dataset.v);
 }));
+/* ブラウザに「この記録は勝手に消さないで」と頼む（容量が逼迫した時の自動削除よけ。アイコン削除などは防げない） */
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});}catch(e){}
 (async function(){
   mediaDB=await idbOpen();
   await hydratePhotos();
