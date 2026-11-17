@@ -757,7 +757,37 @@ async function shrinkImage(file){
 }
 
 /* ===================== NAV ===================== */
+/* スマホの戻る操作（Androidの戻るボタン・端からのスワイプ）で1つ前の画面へ（2026-11-17〜）。
+   ブラウザの履歴の深さを画面の深さにそろえておき、戻る操作が来たら画面の「戻る」ボタンと同じ動きをする。
+   淹れる(0) → 設定(1) → タイマー(2) → 記録(3)／豆・記録一覧(1) → 豆の登録(2)。淹れるでもう一度戻るとアプリを閉じる */
+const SCREEN_DEPTH={home:0,beans:1,history:1,setup:1,timer:2,record:3,beanEdit:2};
+let navSkip=0,navSkipAt=0;                       // こちらから履歴を戻したぶんの戻る通知は読み飛ばす
+function navDepth(){return(history.state&&history.state.brew)?history.state.d:0;}
+function navSync(id){
+  const want=SCREEN_DEPTH[id]||0,cur=navDepth();
+  if(want>cur){for(let d=cur+1;d<=want;d++)history.pushState({brew:1,d},'');}
+  else if(want<cur){navSkip++;navSkipAt=Date.now();history.go(want-cur);}
+}
+function curScreen(){const s=document.querySelector('.screen.on');return s?s.id:'home';}
+window.addEventListener('popstate',()=>{
+  if(navSkip>0&&Date.now()-navSkipAt<1500){navSkip--;return;}
+  navSkip=0;
+  const lb=document.getElementById('lightbox');
+  if(lb.classList.contains('on')){closeLb();return;}   // 写真の拡大表示は閉じるだけ
+  switch(curScreen()){
+    case 'setup':go('home');break;
+    case 'timer':stopTimer();go('setup');break;        // 抽出中でも確認なしで止めて設定へ（本人選択）
+    case 'record':go('timer');break;                   // 記録はまだ保存していない。タイマー画面から「淹れ終わり → 記録」でやり直せる
+    case 'beanEdit':leaveBeanEdit();break;
+    case 'beans':case 'history':go('home');break;
+    default:if(navDepth()>0){navSkip++;navSkipAt=Date.now();history.go(-navDepth());}
+  }
+});
+history.replaceState({brew:1,d:0},'');
 function go(id){
+  showScreen(id);navSync(id);
+}
+function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));
@@ -1296,10 +1326,14 @@ function removePhoto(){
 function openLb(url){
   document.getElementById('lbImg').src=url;
   document.getElementById('lightbox').classList.add('on');
+  history.pushState({brew:1,d:navDepth()+1,lb:1},'');   // 戻る操作で拡大表示を閉じられるように
 }
 function closeLb(){
-  document.getElementById('lightbox').classList.remove('on');
+  const lb=document.getElementById('lightbox');
+  if(!lb.classList.contains('on'))return;
+  lb.classList.remove('on');
   document.getElementById('lbImg').removeAttribute('src');
+  if(history.state&&history.state.lb){navSkip++;navSkipAt=Date.now();history.back();}  // タップで閉じたときは履歴も1つ戻す
 }
 
 /* ---- カード情報の貼り付け登録 ---- */
