@@ -523,7 +523,7 @@ textarea.in{resize:vertical;min-height:54px}
 </nav>
 
 <script>
-/* ===================== DATA: 14 RECIPES ===================== */
+/* ===================== DATA: 18 RECIPES ===================== */
 /* steps: atSec=注ぐ秒, pour=その投の注湯g(基準), cum=累計g(基準), tip=メモ, blm=蒸らし */
 const RECIPES=[
  {id:'hg_v60_h',drawdown:true,group:'萩原 ／ THE COFFEESHOP',name:'V60 ホット',type:'hot',method:'HARIO V60',
@@ -563,6 +563,41 @@ const RECIPES=[
    {atSec:30,pour:90,cum:190,tip:'残り90gを追加し計190g、フィルターをセット'},
    {atSec:60,pour:0,cum:190,tip:'逆さにして30秒かけてプレス → すぐ急冷'}],
   finishSec:60,finishRange:[55,65],finishTip:'プレス後すぐに急冷'},
+
+ /* --- エアロプレス＋Fellow Prismo（2026-11-18追加）。原典＝THE COFFEESHOP《Brew Timer》の動画2本
+        （使用方法【リアルタイム】IF52yvMSvW8／アメリカーノ 4bZ_F9LK90c）。Prismoの圧力バルブで
+        プレスするまで下に落ちないので、逆さにしない（正立）。金属フィルターは「FELLOW」の字が上に見える向き --- */
+ {id:'hg_prismo_shot',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'Prismo ショット',type:'hot',method:'エアロプレス＋Prismo（正立）',
+  base:20,grind:'エスプレッソ用（極細）',temp:'100℃（沸かしたて）',water:50,ice:0,
+  steps:[
+   {atSec:0,pour:50,cum:50,blm:true,tip:'沸騰を確かめてから。10秒かけてゆっくり注ぐ'},
+   {atSec:10,pour:0,cum:50,tip:'すぐパドルで10回撹拌（〜0:20）→ ショットグラスに乗せ、1:00まで待つ（プレスするまで落ちない）'},
+   {atSec:60,pour:0,cum:50,tip:'プランジャーを押し込む。10秒ほどで一番下まで。通常より力が要る＝反対の手でグラスごと支える'}],
+  finishSec:70,finishRange:[65,80],finishTip:'1:10ごろ押し切りで完成。出来上がり25〜30g・クレマが乗る',
+  extra:'そのままでも、ミルクで割っても（コーヒー：ミルク＝1:4〜1:5）。参考＝コーヒー侍はコマンダンテ約6クリック・20g／100℃50ml／10回撹拌→60秒→約25秒でプレス。Seattle Coffee Gearは沸騰50g・30秒撹拌→60秒待ってプレス。'},
+
+ {id:'hg_prismo_ame',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'Prismo アメリカーノ',type:'hot',method:'エアロプレス＋Prismo（正立）',
+  base:25,grind:'粗挽き（フレンチプレス用程度）',temp:'87℃',water:150,ice:0,
+  steps:[
+   {atSec:0,pour:70,cum:70,blm:true,tip:'87℃（温度計が無ければ沸騰後2分ふたを開けて置く）を10秒かけてゆっくり'},
+   {atSec:10,pour:0,cum:70,tip:'すぐパドルで10回撹拌（〜0:20）→ ショットグラスに乗せ、プランジャーで蓋をせず1:10まで待つ'},
+   {atSec:70,pour:0,cum:70,tip:'20秒かけてゆっくりプレス（時間をかけるほど甘みが出る）'},
+   {atSec:90,pour:80,cum:150,tip:'マグに移し、80gを加水 → 軽く混ぜて完成'}],
+  finishSec:90,finishRange:[85,95],finishTip:'1:30ごろ押し切り → 加水80g。出来上がり約120ml',
+  extra:'ラテ用（細かく・濃く）と違い、粗挽きで口当たりなめらか・飲みやすさ重視。浅煎り＝明るい酸味／深煎り＝ナッツ・チョコの香り。カフェラテ風にするなら加水80gの代わりにオーツミルク80g（動画のおすすめ）。'},
+
+ {id:'hg_prismo_latte_i',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'Prismo アイスラテ',type:'ice',method:'エアロプレス＋Prismo（正立）＋牛乳／豆乳',
+  base:20,grind:'エスプレッソ用（極細）',temp:'100℃（沸かしたて）',water:50,ice:0,
+  milkRange:[100,150],
+  milk:{cow:{label:'牛乳',hint:'コーヒー：牛乳＝1:4〜1:5（焙煎度で加減・動画の目安）。冷たいまま'},
+        soy:{label:'豆乳',hint:'＝アイスソイラテ【未検証・動画は牛乳。同じ比率の自家版】。調製豆乳・バリスタ用が分離しにくい'}},
+  prep:['グラスに氷を入れ、冷たい{milkName}を{milkLo}〜{milkHi}g注いでおく（濃いめ＝少なめ）'],
+  steps:[
+   {atSec:0,pour:50,cum:50,blm:true,tip:'沸騰を確かめてから。10秒かけてゆっくり注ぐ'},
+   {atSec:10,pour:0,cum:50,tip:'すぐパドルで10回撹拌（〜0:20）→ ショットグラスに乗せ、1:00まで待つ'},
+   {atSec:60,pour:0,cum:50,tip:'プランジャーを押し込む。10秒ほどで一番下まで。反対の手でグラスごと支える'}],
+  finishSec:70,finishRange:[65,80],finishTip:'1:10ごろ押し切り → ショット（25〜30g）をミルクのグラスへ注ぐ',
+  extra:'ショットはミルクに負けないよう細かく・濃く。コーヒーが負ける → {milkName}を減らす（1:4寄り）／重い → 増やす（1:5寄り）。'},
 
  {id:'hg_fp_h',drawdown:false,group:'萩原 ／ THE COFFEESHOP',name:'フレンチプレス ホット',type:'hot',method:'フレンチプレス',
   base:18,grind:'粗挽き',temp:'—',water:300,ice:0,
@@ -961,10 +996,12 @@ function renderScaled(){
   /* カフェオレ：牛乳（豆乳）＝抽出液と同量。抽出液は「湯 − 豆が吸う分（自重の約2倍）」で見積もる */
   const milkG=cur.milkEq?Math.max(0,Math.round(cur.water*fw-dose*2)):0;
   const v=milkG?{milk:milkG,milkName:milkName(),mw:mwTxt(milkG),watt:mwWatt}:{milkName:milkName()};
+  /* Prismoラテ：ミルクの量は幅（コーヒー：ミルク＝1:4〜1:5）で持ち、豆量に比例させる（5g刻み） */
+  if(cur.milkRange){v.milkLo=Math.round(cur.milkRange[0]*f/5)*5;v.milkHi=Math.round(cur.milkRange[1]*f/5)*5;}
   const milkR=milkG?`<tr><td class="num">乳</td><td>—</td><td>${milkG}g</td><td>—</td><td class="tip">${v.milkName}をレンジ ${v.mw} → 60〜65℃。マグへ先に入れる（抽出液と1:1）</td></tr>`:'';
   let prep=cur.prep?`<div class="note"><b>準備</b>（タイマー前）<br>${cur.prep.map((p,i)=>`${i+1}. ${fill(p,v)}`).join('<br>')}</div>`:'';
   let extra=cur.extra?`<div class="note">${fill(cur.extra,v)}</div>`:'';
-  let iceNote=cur.type==='ice'?`<div class="note">アイスは湯量・氷量も豆量に比例スケールしています。出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
+  let iceNote=(cur.type==='ice'&&cur.ice)?`<div class="note">アイスは湯量・氷量も豆量に比例スケールしています。出来上がりが薄ければ次回は挽き目を細かく、濃ければ粗く微調整を。</div>`:'';
   document.getElementById('scaledTable').innerHTML=
     `<div class="eyebrow" style="margin-top:14px">RECIPE ／ 豆${dose}g${st?`・${st.label} ${st.ratio}`:''}${cur.milk?`・${milkName()}`:''}</div>
      ${prep}
